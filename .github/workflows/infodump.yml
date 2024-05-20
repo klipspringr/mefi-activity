@@ -35,5 +35,8 @@ jobs:
               run: |
                   git config --global user.name 'Infodump robot'
                   git config --global user.email 'klipspringr@users.noreply.github.com'
-                  git commit -am "New infodump data"
-                  git push
+                  git add -A
+                  if ! git diff-index --quiet HEAD; then
+                    git commit -m "Automated infodump update"
+                    git push
+                  fi
