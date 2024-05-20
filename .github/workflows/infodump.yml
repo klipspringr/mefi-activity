@@ -1,0 +1,39 @@
+name: Check infodump and update if needed
+
+on:
+    # Allows you to run this workflow manually from the Actions tab
+    workflow_dispatch:
+
+    # Run on daily schedule, UTC
+    schedule:
+        - cron: "23 6 * * *"
+
+permissions:
+    contents: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+    group: "infodump"
+    cancel-in-progress: false
+
+jobs:
+    infodump:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.INFODUMP_ACCESS_TOKEN }}
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+            - name: Download MetaFilter infodump
+              run: python download.py public/data.json
+            - name: Push any changes
+              run: |
+                  git config --global user.name 'Infodump robot'
+                  git config --global user.email 'klipspringr@users.noreply.github.com'
+                  git commit -am "New infodump data"
+                  git push

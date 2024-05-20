@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <title>MetaFilter stats</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        body {
+            font-family: system-ui;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>MetaFilter activity stats</h1>
+
+    <p>
+        <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from
+        <strong id="infodump_version">Loading...</strong>.
+        Any problems or comments, open an issue on <a href="https://github.com/klipspringr/mefi-activity">github</a> or
+        <a href="https://www.metafilter.com/user/304523">MeFi Mail</a> me.
+    </p>
+
+    <label>
+        <strong>Show data for site:</strong>
+        <select id="site">
+            <option value="all" selected>All sites</option>
+            <option value="mefi">MetaFilter</option>
+            <option value="askme">AskMe</option>
+            <option value="meta">MetaTalk</option>
+            <option value="fanfare">Fanfare</option>
+            <option value="music">Music</option>
+        </select>
+    </label>
+
+    <h2>Monthly active users, segmented by year joined</h2>
+    <canvas id="chart_active"></canvas>
+    <p>Active = at least one post or comment during the month</p>
+
+    <h2>Posts per month</h2>
+    <canvas id="chart_posts"></canvas>
+
+    <h2>Comments per month</h2>
+    <canvas id="chart_comments"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        let json
+
+        const chartActive = new Chart(document.getElementById('chart_active'), {
+            type: 'bar',
+            data: {
+                datasets: []
+            },
+            options: {
+                datasets: {
+                    bar: {
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        stacked: true
+                    },
+                    x: {
+                        stacked: true
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: (items) => "Total: " + Intl.NumberFormat().format(items.reduce((t, i) => t + i.parsed.y, 0))
+                        }
+                    },
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+
+        })
+
+        const chartPosts = new Chart(document.getElementById('chart_posts'), {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Posts per month',
+                    data: [],
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    barPercentage: 1,
+                    categoryPercentage: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+        })
+
+        const chartComments = new Chart(document.getElementById('chart_comments'), {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Comments per month',
+                    data: [],
+                    backgroundColor: 'rgb(153, 102, 255)',
+                    barPercentage: 1,
+                    categoryPercentage: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+        })
+
+        function updateCharts(site) {
+            chartActive.data.labels = json["active"][site]["labels"]
+            chartActive.data.datasets = Object.entries(json["active"][site]["data"]).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
+
+            chartPosts.data.labels = Object.keys(json["posts"][site])
+            chartPosts.data.datasets[0].data = Object.values(json["posts"][site])
+
+            chartComments.data.labels = Object.keys(json["comments"][site])
+            chartComments.data.datasets[0].data = Object.values(json["comments"][site])
+
+            chartActive.update()
+            chartPosts.update()
+            chartComments.update()
+        }
+
+        document.getElementById("site").addEventListener("change", (e) => updateCharts(e.target.value))
+
+        fetch("data.json", { cache: "no-store" }).then(r => {
+            if (!r.ok) throw new Error("HTTP error " + r.status)
+            return r.json()
+        }).then(j => {
+            json = j
+            document.getElementById("infodump_version").innerText = json["infodump_version"]
+            updateCharts("all")
+        })        
+    </script>
+</body>
+
+</html>
