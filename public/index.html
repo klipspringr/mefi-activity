@@ -34,9 +34,12 @@
         </select>
     </label>
 
-    <h2>Monthly active users, segmented by year joined</h2>
+    <h2>Monthly active users</h2>
     <canvas id="chart_active"></canvas>
-    <p>Active = at least one post or comment during the month</p>
+    <p>
+        Segmented by year joined<br>
+        Active = at least one post or comment during the month
+    </p>
 
     <h2>Posts per month</h2>
     <canvas id="chart_posts"></canvas>
@@ -47,84 +50,85 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
         let json
+        let chartActive
+        let chartPosts
+        let chartComments
 
-        const chartActive = new Chart(document.getElementById('chart_active'), {
-            type: 'bar',
-            data: {
-                datasets: []
-            },
-            options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }
-                },
-                scales: {
-                    y: {
-                        stacked: true
-                    },
-                    x: {
-                        stacked: true
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            footer: (items) => "Total: " + Intl.NumberFormat().format(items.reduce((t, i) => t + i.parsed.y, 0))
+        function createCharts() {
+            chartActive = new Chart(document.getElementById('chart_active'), {
+                type: 'bar',
+                data: {},
+                options: {
+                    datasets: {
+                        bar: {
+                            barPercentage: 1,
+                            categoryPercentage: 1
                         }
                     },
-                    legend: {
-                        display: false,
+                    scales: {
+                        y: {
+                            stacked: true
+                        },
+                        x: {
+                            stacked: true
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                afterTitle: (items) => "Total: " + Intl.NumberFormat().format(items.reduce((t, i) => t + i.parsed.y, 0))
+                            }
+                        },
+                        legend: {
+                            display: false,
+                        }
                     }
-                }
-            },
+                },
 
-        })
-
-        const chartPosts = new Chart(document.getElementById('chart_posts'), {
-            type: 'bar',
-            data: {
-                datasets: [{
-                    label: 'Posts per month',
-                    data: [],
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    barPercentage: 1,
-                    categoryPercentage: 1
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false,
+            })
+            chartPosts = new Chart(document.getElementById('chart_posts'), {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: 'Posts per month',
+                        data: [],
+                        backgroundColor: 'rgb(255, 99, 132)',
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false,
+                        }
                     }
-                }
-            },
-        })
-
-        const chartComments = new Chart(document.getElementById('chart_comments'), {
-            type: 'bar',
-            data: {
-                datasets: [{
-                    label: 'Comments per month',
-                    data: [],
-                    backgroundColor: 'rgb(153, 102, 255)',
-                    barPercentage: 1,
-                    categoryPercentage: 1
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false,
+                },
+            })
+            chartComments = new Chart(document.getElementById('chart_comments'), {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: 'Comments per month',
+                        data: [],
+                        backgroundColor: 'rgb(153, 102, 255)',
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false,
+                        }
                     }
-                }
-            },
-        })
+                },
+            })
+        }
 
         function updateCharts(site) {
             chartActive.data.labels = json["active"][site]["labels"]
@@ -141,16 +145,16 @@
             chartComments.update()
         }
 
-        document.getElementById("site").addEventListener("change", (e) => updateCharts(e.target.value))
-
         fetch("data.json", { cache: "no-store" }).then(r => {
             if (!r.ok) throw new Error("HTTP error " + r.status)
             return r.json()
         }).then(j => {
             json = j
             document.getElementById("infodump_version").innerText = json["infodump_version"]
+            document.getElementById("site").addEventListener("change", (e) => updateCharts(e.target.value))
+            createCharts()
             updateCharts("all")
-        })        
+        })
     </script>
 </body>
 
