@@ -9,6 +9,11 @@
         body {
             font-family: system-ui;
         }
+
+        select,
+        option {
+            font-size: large;
+        }
     </style>
 </head>
 
@@ -17,28 +22,32 @@
 
     <p>
         <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from
-        <strong id="infodump_version">Loading...</strong>.
+        <strong id="infodump_timestamp">Loading...</strong>.
         Any problems or comments, open an issue on <a href="https://github.com/klipspringr/mefi-activity">github</a> or
         <a href="https://www.metafilter.com/user/304523">MeFi Mail</a> me.
     </p>
 
-    <label>
-        <strong>Show data for site:</strong>
+    <h3>
+        Show data for:
         <select id="site">
-            <option value="all" selected>All sites</option>
+            <option value="all" selected>All sites combined</option>
             <option value="mefi">MetaFilter</option>
             <option value="askme">AskMe</option>
             <option value="meta">MetaTalk</option>
             <option value="fanfare">Fanfare</option>
             <option value="music">Music</option>
         </select>
-    </label>
+    </h3>
+
+    <p>
+        "Active" means at least one post or comment on the selected subsite during the month<br>
+        All charts exclude latest (incomplete) month
+    </p>
 
     <h2>Monthly active users</h2>
     <canvas id="chart_active"></canvas>
     <p>
-        Segmented by year joined<br>
-        Active = at least one post or comment during the month
+        Active users broken down by year joined
     </p>
 
     <h2>Posts per month</h2>
@@ -47,92 +56,142 @@
     <h2>Comments per month</h2>
     <canvas id="chart_comments"></canvas>
 
+    <h2>Posts per month per active user</h2>
+    <canvas id="chart_posts_per_user"></canvas>
+
+    <h2>Comments per month per active user</h2>
+    <canvas id="chart_comments_per_user"></canvas>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
         let json
-        let chartActive
-        let chartPosts
-        let chartComments
+        let site
 
-        function createCharts() {
-            chartActive = new Chart(document.getElementById('chart_active'), {
-                type: 'bar',
-                data: {},
-                options: {
-                    datasets: {
-                        bar: {
-                            barPercentage: 1,
-                            categoryPercentage: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            stacked: true
-                        },
-                        x: {
-                            stacked: true
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                afterTitle: (items) => "Total: " + Intl.NumberFormat().format(items.reduce((t, i) => t + i.parsed.y, 0))
-                            }
-                        },
-                        legend: {
-                            display: false,
-                        }
-                    }
-                },
-
-            })
-            chartPosts = new Chart(document.getElementById('chart_posts'), {
-                type: 'bar',
-                data: {
-                    datasets: [{
-                        label: 'Posts per month',
-                        data: [],
-                        backgroundColor: 'rgb(255, 99, 132)',
+        let chartActive = new Chart(document.getElementById('chart_active'), {
+            type: 'bar',
+            data: {},
+            options: {
+                datasets: {
+                    bar: {
                         barPercentage: 1,
                         categoryPercentage: 1
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: {
-                            display: false,
-                        }
                     }
                 },
-            })
-            chartComments = new Chart(document.getElementById('chart_comments'), {
-                type: 'bar',
-                data: {
-                    datasets: [{
-                        label: 'Comments per month',
-                        data: [],
-                        backgroundColor: 'rgb(153, 102, 255)',
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: {
-                            display: false,
-                        }
+                scales: {
+                    y: {
+                        stacked: true
+                    },
+                    x: {
+                        stacked: true
                     }
                 },
-            })
-        }
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: (ctx) => "Total active: " + Intl.NumberFormat().format(json["active"][site]["totals"][ctx[0].dataIndex])
+                        }
+                    },
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
 
-        function updateCharts(site) {
+        })
+        let chartPosts = new Chart(document.getElementById('chart_posts'), {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Posts per month',
+                    data: [],
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    barPercentage: 1,
+                    categoryPercentage: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: (ctx) => "Posts per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+                        }
+                    },
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+        })
+        let chartComments = new Chart(document.getElementById('chart_comments'), {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Comments per month',
+                    data: [],
+                    backgroundColor: 'rgb(153, 102, 255)',
+                    barPercentage: 1,
+                    categoryPercentage: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: (ctx) => "Comments per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+                        }
+                    },
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+        })
+        let chartPostsPerUser = new Chart(document.getElementById('chart_posts_per_user'), {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Posts per active user',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 2
+                    }
+                }
+            }
+        })
+        let chartCommentsPerUser = new Chart(document.getElementById('chart_comments_per_user'), {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Comments per active user',
+                    data: [],
+                    borderColor: 'rgb(153, 102, 255)',
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false,
+                    }
+                }
+            },
+        })
+
+        function updateCharts() {
+            site = document.getElementById("site").value
+
             chartActive.data.labels = json["active"][site]["labels"]
-            chartActive.data.datasets = Object.entries(json["active"][site]["data"]).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
+            chartActive.data.datasets = Object.entries(json["active"][site]["by_year"]).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
 
             chartPosts.data.labels = Object.keys(json["posts"][site])
             chartPosts.data.datasets[0].data = Object.values(json["posts"][site])
@@ -140,9 +199,17 @@
             chartComments.data.labels = Object.keys(json["comments"][site])
             chartComments.data.datasets[0].data = Object.values(json["comments"][site])
 
+            chartPostsPerUser.data.labels = Object.keys(json["posts"][site])
+            chartPostsPerUser.data.datasets[0].data = Object.values(json["posts"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
+
+            chartCommentsPerUser.data.labels = Object.keys(json["comments"][site])
+            chartCommentsPerUser.data.datasets[0].data = Object.values(json["comments"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
+
             chartActive.update()
             chartPosts.update()
             chartComments.update()
+            chartPostsPerUser.update()
+            chartCommentsPerUser.update()
         }
 
         fetch("data.json", { cache: "no-store" }).then(r => {
@@ -150,10 +217,9 @@
             return r.json()
         }).then(j => {
             json = j
-            document.getElementById("infodump_version").innerText = json["infodump_version"]
-            document.getElementById("site").addEventListener("change", (e) => updateCharts(e.target.value))
-            createCharts()
-            updateCharts("all")
+            document.getElementById("infodump_timestamp").innerText = json["infodump_timestamp"]
+            document.getElementById("site").addEventListener("change", (e) => updateCharts())
+            updateCharts()
         })
     </script>
 </body>

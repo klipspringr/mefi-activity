@@ -17,7 +17,14 @@ SITES = ["mefi", "askme", "meta", "fanfare", "music"]
 # mefi users table runs from Jan 27 2000 08:16:57:367PM to date
 JOIN_YEARS = [str(year) for year in range(2000, datetime.now().year + 1)]
 
-def download(filename, skip = 2):
+def get_infodump_timestamp():
+    with urlopen(Request(INFODUMP_HOMEPAGE, headers=HEADERS)) as f:
+        contents = f.read().decode("utf-8")
+        raw_date = re.search("Last updated: <b>(.+)</b>", contents).group(1)
+        parsed_date = datetime.strptime(raw_date, "%a %b %d %H:%M:%S %Y")
+        return parsed_date.strftime("%d %B %Y %H:%M"), parsed_date.strftime("%Y-%b")
+
+def get_infodump_file(filename, skip = 2):
     url = INFODUMP_BASE + filename + ".txt.zip"
     print(f"get {url}")
 
@@ -39,23 +46,17 @@ json_path = sys.argv[1]
 
 try:
     with open(json_path, "r") as f:
-        json_version = json.load(f)["infodump_version"]
+        json_timestamp = json.load(f)["infodump_timestamp"]
 except:
-    json_version = None
+    json_timestamp = None
 
-with urlopen(Request(INFODUMP_HOMEPAGE, headers=HEADERS)) as f:
-    contents = f.read().decode("utf-8")
-    raw_date = re.search("Last updated: <b>(.+)</b>", contents).group(1)
-    infodump_version = datetime.strptime(raw_date, "%a %b %d %H:%M:%S %Y").strftime("%d %B %Y %H:%M")
-    if not infodump_version:
-        raise Exception("couldn't get infodump version")
-
-if json_version == infodump_version:
+infodump_timestamp, month_to_skip = get_infodump_timestamp()
+if infodump_timestamp == json_timestamp:
     print("infodump unchanged")
     sys.exit(0)
 
 user_joined = {}
-for user_id, date, _ in download("usernames"):
+for user_id, date, _ in get_infodump_file("usernames"):
     user_joined[user_id] = date[7:11]
 
 posts = {site: defaultdict(int) for site in SITES}
@@ -67,15 +68,19 @@ comments["all"] = defaultdict(int)
 unique_users["all"] = defaultdict(set)
 
 for site in SITES:
-    for _, user_id, date, *_ in download(f"postdata_{site}"):
+    for _, user_id, date, *_ in get_infodump_file(f"postdata_{site}"):
         month = f'{date[7:11]}-{date[:3]}'
+        if month == month_to_skip:
+            break
         posts[site][month] += 1
         posts["all"][month] += 1
         unique_users[site][month].add(user_id)
         unique_users["all"][month].add(user_id)
 
-    for _, _, user_id, date, *_ in download(f"commentdata_{site}"):
+    for _, _, user_id, date, *_ in get_infodump_file(f"commentdata_{site}"):
         month = f'{date[7:11]}-{date[:3]}'
+        if month == month_to_skip:
+            break
         comments[site][month] += 1
         comments["all"][month] += 1
         unique_users[site][month].add(user_id)
@@ -85,17 +90,18 @@ active = {}
 for site, months_users in unique_users.items():
     active[site] = {
         "labels": [k for k in months_users.keys()],
-        "data": {join_year: [0 for _ in months_users.keys()] for join_year in JOIN_YEARS}
+        "by_year": {join_year: [0 for _ in months_users.keys()] for join_year in JOIN_YEARS},
+        "totals": [len(u) for u in months_users.values()]
     }
     for index, (month, users) in enumerate(months_users.items()):
         for user_id in users:
             if user_id in user_joined:
                 join_year = user_joined[user_id]
-                active[site]["data"][join_year][index] += 1
+                active[site]["by_year"][join_year][index] += 1
 
 with open(json_path, "w") as f:
     json.dump({
-        "infodump_version": infodump_version,
+        "infodump_timestamp": infodump_timestamp,
         "posts": posts,
         "comments": comments,
         "active": active
