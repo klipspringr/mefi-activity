@@ -3,7 +3,7 @@
 
 <head>
     <meta charset='utf-8'>
-    <title>MetaFilter stats</title>
+    <title>MetaFilter activity stats</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <style>
         body {
@@ -20,13 +20,6 @@
 <body>
     <h1>MetaFilter activity stats</h1>
 
-    <p>
-        <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from
-        <strong id="infodump_timestamp">Loading...</strong>.
-        Any problems or comments, open an issue on <a href="https://github.com/klipspringr/mefi-activity">github</a> or
-        <a href="https://www.metafilter.com/user/304523">MeFi Mail</a> me.
-    </p>
-
     <h3>
         Show data for:
         <select id="site">
@@ -39,16 +32,26 @@
         </select>
     </h3>
 
-    <p>
-        "Active" means at least one post or comment on the selected subsite during the month<br>
-        All charts exclude latest (incomplete) month
-    </p>
+    <ul>
+        <li>
+            <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from <strong
+                id="infodump_timestamp">Loading...</strong>. Infodump updates show here within 24 hours.
+        </li>
+        <li>
+            Any problems or comments, open an issue on <a href="https://github.com/klipspringr/mefi-activity">github</a>
+            or <a href="https://www.metafilter.com/user/304523">MeFi Mail</a> me.
+        </li>
+        <li>
+            A user is "active" if they made at least one post or comment on the selected subsite during the month.
+            Active users are broken down by year joined.
+        </li>
+        <li>
+            Charts exclude the latest (incomplete) month.
+        </li>
+    </ul>
 
     <h2>Monthly active users</h2>
     <canvas id="chart_active"></canvas>
-    <p>
-        Active users broken down by year joined
-    </p>
 
     <h2>Posts per month</h2>
     <canvas id="chart_posts"></canvas>
