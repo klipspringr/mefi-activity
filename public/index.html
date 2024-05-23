@@ -166,8 +166,7 @@
                 },
                 scales: {
                     y: {
-                        min: 0,
-                        max: 2
+                        beginAtZero: true,
                     }
                 }
             }
@@ -185,6 +184,11 @@
                 plugins: {
                     legend: {
                         display: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
                     }
                 }
             },
@@ -204,6 +208,9 @@
 
             chartPostsPerUser.data.labels = Object.keys(json["posts"][site])
             chartPostsPerUser.data.datasets[0].data = Object.values(json["posts"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
+
+            // for all and mefi, posts per user was distortingly high in early years, so truncate y-axis at 2
+            chartPostsPerUser.options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
 
             chartCommentsPerUser.data.labels = Object.keys(json["comments"][site])
             chartCommentsPerUser.data.datasets[0].data = Object.values(json["comments"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
