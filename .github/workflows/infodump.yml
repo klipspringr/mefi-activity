@@ -30,7 +30,7 @@ jobs:
               with:
                   python-version: "3.11"
             - name: Download MetaFilter infodump
-              run: python download.py public/data.json
+              run: python download.py --no-cache public/data.json
             - name: Push any changes
               run: |
                   git config --global user.name 'Infodump robot'
