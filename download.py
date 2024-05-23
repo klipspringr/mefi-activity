@@ -68,7 +68,9 @@ comments["all"] = defaultdict(int)
 unique_users["all"] = defaultdict(set)
 
 for site in SITES:
-    for _, user_id, date, *_ in get_infodump_file(f"postdata_{site}"):
+    for _, user_id, date, category, *_ in get_infodump_file(f"postdata_{site}"):
+        if site == "meta" and category == "10":
+            continue # skip early askmes stored in meta db table
         month = f'{date[7:11]}-{date[:3]}'
         if month == month_to_skip:
             break
@@ -95,6 +97,7 @@ for site, months_users in unique_users.items():
     }
     for index, (month, users) in enumerate(months_users.items()):
         for user_id in users:
+            # a few user_ids are not in user_joined: see https://mefiwiki.com/wiki/Infodump#Userid_munging
             if user_id in user_joined:
                 join_year = user_joined[user_id]
                 active[site]["by_year"][join_year][index] += 1
