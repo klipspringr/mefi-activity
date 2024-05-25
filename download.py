@@ -14,6 +14,7 @@ import sys
 
 SITES = ["mefi", "askme", "meta", "fanfare", "music"]
 JOIN_YEARS = [str(year) for year in range(2000, datetime.now().year + 1)] # first users join date Jan 27 2000 in DB
+MONTHS = { "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6, "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12 }
 
 INFODUMP_HOMEPAGE = "https://stuff.metafilter.com/infodump/"
 INFODUMP_BASE = "https://mefi.us/infodump/"
@@ -72,16 +73,28 @@ def main():
     daily = {site: { "posts": [0] * 7, "comments": [0] * 7 } for site in SITES + ["all"]}
     hourly = {site: { "posts": [0] * 24, "comments": [0] * 24 } for site in SITES + ["all"]}
 
+    def hour24(hour, pm):
+        if hour == 12:
+            return 12 if pm else 0
+        return hour + 12 if pm else hour
+
     def parse_line(site, type, raw_date, user_id):
-        date = datetime.strptime(raw_date, "%b %d %Y %I:%M:%S:%f%p")
+        # let's manually parse the date because strptime is so slow. Raw: "Jun 29 2006 08:10:14:467PM"
+        date = datetime(int(raw_date[7:11]),
+                        MONTHS[raw_date[0:3]],
+                        int(raw_date[4:6]),
+                        hour24(int(raw_date[12:14]), raw_date[24]=="P"))
+        
         if date.year == infodump_date.year and date.month == infodump_date.month:
-            return False # stop parsing if date is same month as infodump timestamp
-        month_key = date.strftime("%Y %b")
+            return False # stop parsing when we hit month of infodump timestamp
+        
+        month_label = raw_date[7:11] + " " + raw_date[0:3]
         for s in [site, "all"]:
-            monthly[s][month_key][type] += 1
-            monthly[s][month_key]["users"].add(user_id)
+            monthly[s][month_label][type] += 1
+            monthly[s][month_label]["users"].add(user_id)
             hourly[s][type][date.hour] += 1
             daily[s][type][date.weekday()] += 1
+
         return True
 
     # parse infodump into monthly, daily, and hourly counters
