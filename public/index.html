@@ -96,6 +96,9 @@
         <h2 id="comments_per_user">Comments per active user</h2>
         <canvas id="chart_comments_per_user"></canvas>
 
+        <h2 id="comments_per_user">Comments per post</h2>
+        <canvas id="chart_comments_per_post"></canvas>
+
         <h2 id="days">Posts and comments by day of week</h2>
         <canvas id="chart_days"></canvas>
 
@@ -116,7 +119,7 @@
             site = document.getElementById("siteSelector").value
 
             // set labels for monthly charts
-            for (const c of ["users", "posts", "comments", "posts_per_user", "comments_per_user"]) {
+            for (const c of ["users", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
                 charts[c].data.labels = MONTHLY[site].labels
             }
 
@@ -126,6 +129,7 @@
             charts["comments"].data.datasets[0].data = MONTHLY[site].comments
             charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
             charts["comments_per_user"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i]))
+            charts["comments_per_post"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i]))
             charts["days"].data.datasets[0].data = DAILY[site].posts
             charts["days"].data.datasets[1].data = DAILY[site].comments
             charts["hours"].data.datasets[0].data = HOURLY[site].posts
@@ -221,6 +225,14 @@
             },
         })
         chartInit("comments_per_user", {
+            type: 'line',
+            data: {
+                datasets: [{
+                    borderColor: 'rgb(153, 102, 255)',
+                }]
+            },
+        })
+        chartInit("comments_per_post", {
             type: 'line',
             data: {
                 datasets: [{
