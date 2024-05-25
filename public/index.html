@@ -5,74 +5,143 @@
     <meta charset='utf-8'>
     <title>MetaFilter activity stats</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="data.js"></script>
     <style>
+        html,
         body {
             font-family: system-ui;
+            padding: 0;
+            margin: 0;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background-color: #065A8F;
+            color: #FFFFFF;
+            padding: 6px 10px;
+        }
+
+        header h1,
+        header p {
+            margin: 0;
         }
 
         select,
         option {
             font-size: large;
         }
+
+        main {
+            padding: 0 10px;
+        }
+
+        h2 {
+            color: #065A8F;
+        }
     </style>
 </head>
 
 <body>
-    <h1>MetaFilter activity stats</h1>
+    <header>
+        <h1>MetaFilter activity stats</h1>
+        <p>
+            Show data for:
+            <select id="siteSelector">
+                <option value="all" selected>All sites</option>
+                <option value="mefi">MetaFilter</option>
+                <option value="askme">AskMe</option>
+                <option value="meta">MetaTalk</option>
+                <option value="fanfare">Fanfare</option>
+                <option value="music">Music</option>
+            </select>
+        </p>
+    </header>
+    <main>
+        <ul>
+            <li>
+                <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from
+                <strong id="timestamp">Loading</strong>. Infodump updates show here within 24 hours.
+            </li>
+            <li>
+                Charts exclude the latest (incomplete) month.
+            </li>
+            <li>
+                A user is "active" if they made at least one post or comment on the selected subsite during the month.
+                Active users are broken down by year joined.
+            </li>
+            <li>
+                Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a> or <a
+                    href="https://github.com/klipspringr/mefi-activity/issues">open an
+                    issue</a>.
+                <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not affiliated with
+                MetaFilter LLC.
+            </li>
 
-    <h3>
-        Show data for:
-        <select id="site">
-            <option value="all" selected>All sites</option>
-            <option value="mefi">MetaFilter</option>
-            <option value="askme">AskMe</option>
-            <option value="meta">MetaTalk</option>
-            <option value="fanfare">Fanfare</option>
-            <option value="music">Music</option>
-        </select>
-    </h3>
+        </ul>
 
-    <ul>
-        <li>
-            <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from <strong
-                id="infodump_timestamp">Loading...</strong>. Infodump updates show here within 24 hours.
-        </li>
-        <li>
-            Any problems or comments, open an issue on <a href="https://github.com/klipspringr/mefi-activity">github</a>
-            or <a href="https://www.metafilter.com/user/304523">MeFi Mail</a> me.
-        </li>
-        <li>
-            A user is "active" if they made at least one post or comment on the selected subsite during the month.
-            Active users are broken down by year joined.
-        </li>
-        <li>
-            Charts exclude the latest (incomplete) month.
-        </li>
-    </ul>
+        <h2 id="users">Active users</h2>
+        <canvas id="chart_users"></canvas>
 
-    <h2>Monthly active users</h2>
-    <canvas id="chart_active"></canvas>
+        <h2 id="posts">Posts</h2>
+        <canvas id="chart_posts"></canvas>
 
-    <h2>Posts per month</h2>
-    <canvas id="chart_posts"></canvas>
+        <h2 id="comments">Comments</h2>
+        <canvas id="chart_comments"></canvas>
 
-    <h2>Comments per month</h2>
-    <canvas id="chart_comments"></canvas>
+        <h2 id="posts_per_user">Posts per active user</h2>
+        <canvas id="chart_posts_per_user"></canvas>
 
-    <h2>Posts per month per active user</h2>
-    <canvas id="chart_posts_per_user"></canvas>
+        <h2 id="comments_per_user">Comments per active user</h2>
+        <canvas id="chart_comments_per_user"></canvas>
 
-    <h2>Comments per month per active user</h2>
-    <canvas id="chart_comments_per_user"></canvas>
+        <h2 id="days">Posts and comments by day of week</h2>
+        <canvas id="chart_days"></canvas>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        <h2 id="hours">Posts and comments by hour</h2>
+        <canvas id="chart_hours"></canvas>
+        <p>Timestamps are recorded on the MetaFilter server in Pacific Time.</p>
+    </main>
+
     <script>
-        let json
+        "use strict"
+        const charts = {}
         let site
 
-        let chartActive = new Chart(document.getElementById('chart_active'), {
+        Chart.defaults.plugins.legend.display = false
+        Chart.defaults.scales.linear.beginAtZero = true
+
+        const updateCharts = () => {
+            site = document.getElementById("siteSelector").value
+
+            // set labels for monthly charts
+            for (const c of ["users", "posts", "comments", "posts_per_user", "comments_per_user"]) {
+                charts[c].data.labels = MONTHLY[site].labels
+            }
+
+            // set chart data
+            charts["users"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
+            charts["posts"].data.datasets[0].data = MONTHLY[site].posts
+            charts["comments"].data.datasets[0].data = MONTHLY[site].comments
+            charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
+            charts["comments_per_user"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i]))
+            charts["days"].data.datasets[0].data = DAILY[site].posts
+            charts["days"].data.datasets[1].data = DAILY[site].comments
+            charts["hours"].data.datasets[0].data = HOURLY[site].posts
+            charts["hours"].data.datasets[1].data = HOURLY[site].comments
+
+            // mefi posts per user is very high in early years, so truncate y-axis at 2
+            charts["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
+
+            Object.values(charts).forEach(c => c.update())
+        }
+
+        const chartInit = (id, config) => charts[id] = new Chart(document.getElementById("chart_" + id), config)
+        const tooltipPerDay = (ctx) => "Per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+
+        chartInit("users", {
             type: 'bar',
-            data: {},
             options: {
                 datasets: {
                     bar: {
@@ -91,146 +160,142 @@
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            footer: (ctx) => "Total active: " + Intl.NumberFormat().format(json["active"][site]["totals"][ctx[0].dataIndex])
+                            footer: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
                         }
                     },
-                    legend: {
-                        display: false,
-                    }
                 }
             },
-
         })
-        let chartPosts = new Chart(document.getElementById('chart_posts'), {
+        chartInit("posts", {
             type: 'bar',
             data: {
                 datasets: [{
-                    label: 'Posts per month',
-                    data: [],
                     backgroundColor: 'rgb(255, 99, 132)',
-                    barPercentage: 1,
-                    categoryPercentage: 1
                 }]
             },
             options: {
+                datasets: {
+                    bar: {
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            footer: (ctx) => "Posts per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+                            footer: tooltipPerDay
                         }
                     },
-                    legend: {
-                        display: false,
-                    }
                 }
             },
         })
-        let chartComments = new Chart(document.getElementById('chart_comments'), {
+        chartInit("comments", {
             type: 'bar',
             data: {
                 datasets: [{
-                    label: 'Comments per month',
-                    data: [],
                     backgroundColor: 'rgb(153, 102, 255)',
-                    barPercentage: 1,
-                    categoryPercentage: 1
                 }]
             },
             options: {
+                datasets: {
+                    bar: {
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            footer: (ctx) => "Comments per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+                            footer: tooltipPerDay
                         }
                     },
-                    legend: {
-                        display: false,
-                    }
                 }
             },
         })
-        let chartPostsPerUser = new Chart(document.getElementById('chart_posts_per_user'), {
+        chartInit("posts_per_user", {
             type: 'line',
             data: {
                 datasets: [{
-                    label: 'Posts per active user',
-                    data: [],
                     borderColor: 'rgb(255, 99, 132)',
                 }]
             },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false,
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                    }
-                }
-            }
         })
-        let chartCommentsPerUser = new Chart(document.getElementById('chart_comments_per_user'), {
+        chartInit("comments_per_user", {
             type: 'line',
             data: {
                 datasets: [{
-                    label: 'Comments per active user',
-                    data: [],
                     borderColor: 'rgb(153, 102, 255)',
                 }]
             },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false,
-                    }
+        })
+        chartInit("days", {
+            type: 'bar',
+            data: {
+                labels: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                datasets: [{
+                    label: "Posts",
+                    backgroundColor: 'rgb(255, 99, 132)',
                 },
+                {
+                    label: "Comments",
+                    backgroundColor: 'rgb(153, 102, 255)',
+                }]
+            },
+            options: {
                 scales: {
                     y: {
-                        beginAtZero: true,
+                        ticks: {
+                            format: {
+                                style: "percent",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 1
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            },
+        })
+        chartInit("hours", {
+            type: 'bar',
+            data: {
+                labels: [...Array(24).keys()],
+                datasets: [{
+                    label: "Posts",
+                    backgroundColor: 'rgb(255, 99, 132)',
+                },
+                {
+                    label: "Comments",
+                    backgroundColor: 'rgb(153, 102, 255)',
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        ticks: {
+                            format: {
+                                style: "percent",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 1
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
                     }
                 }
             },
         })
 
-        function updateCharts() {
-            site = document.getElementById("site").value
-
-            chartActive.data.labels = json["active"][site]["labels"]
-            chartActive.data.datasets = Object.entries(json["active"][site]["by_year"]).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
-
-            chartPosts.data.labels = Object.keys(json["posts"][site])
-            chartPosts.data.datasets[0].data = Object.values(json["posts"][site])
-
-            chartComments.data.labels = Object.keys(json["comments"][site])
-            chartComments.data.datasets[0].data = Object.values(json["comments"][site])
-
-            chartPostsPerUser.data.labels = Object.keys(json["posts"][site])
-            chartPostsPerUser.data.datasets[0].data = Object.values(json["posts"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
-
-            // for all and mefi, posts per user was distortingly high in early years, so truncate y-axis at 2
-            chartPostsPerUser.options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
-
-            chartCommentsPerUser.data.labels = Object.keys(json["comments"][site])
-            chartCommentsPerUser.data.datasets[0].data = Object.values(json["comments"][site]).map((v, i) => (v / json["active"][site]["totals"][i]))
-
-            chartActive.update()
-            chartPosts.update()
-            chartComments.update()
-            chartPostsPerUser.update()
-            chartCommentsPerUser.update()
-        }
-
-        fetch("data.json", { cache: "no-store" }).then(r => {
-            if (!r.ok) throw new Error("HTTP error " + r.status)
-            return r.json()
-        }).then(j => {
-            json = j
-            document.getElementById("infodump_timestamp").innerText = json["infodump_timestamp"]
-            document.getElementById("site").addEventListener("change", (e) => updateCharts())
-            updateCharts()
-        })
+        document.getElementById("timestamp").innerText = TIMESTAMP
+        document.getElementById("siteSelector").addEventListener("change", updateCharts)
+        updateCharts()
     </script>
 </body>
 
