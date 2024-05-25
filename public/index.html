@@ -18,19 +18,22 @@
         header {
             position: sticky;
             top: 0;
-            background-color: #065A8F;
+            padding: 10px;
+            background-color: rgb(6, 90, 143);
+            font-weight: 600;
             color: #FFFFFF;
-            padding: 6px 10px;
         }
 
-        header h1,
-        header p {
-            margin: 0;
+        header h1 {
+            font-size: x-large;
+            color: rgb(136, 194, 216);
+            margin: 0 0 10px 0;
         }
 
         select,
         option {
             font-size: large;
+            max-width: 10rem;
         }
 
         main {
@@ -38,16 +41,24 @@
         }
 
         h2 {
-            color: #065A8F;
+            color: rgb(6, 90, 143);
+            scroll-margin-top: 90px;
+        }
+
+        .white {
+            color: white;
+        }
+
+        .green {
+            color: rgb(156, 199, 84);
         }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>MetaFilter activity stats</h1>
-        <p>
-            Show data for:
+        <h1><span class="white">Meta</span><span class="green">Filter</span> activity stats</h1>
+        <label>Site:
             <select id="siteSelector">
                 <option value="all" selected>All sites</option>
                 <option value="mefi">MetaFilter</option>
@@ -56,7 +67,18 @@
                 <option value="fanfare">Fanfare</option>
                 <option value="music">Music</option>
             </select>
-        </p>
+        </label>
+        &middot;
+        <label>Go:
+            <select id="jumpSelector">
+                <option value="#top" selected>Top</option>
+                <option value="#users" selected>Active users</option>
+                <option value="#posts">Posts and comments</option>
+                <option value="#posts_per_user">Per active user</option>
+                <option value="#comments_per_post">Comments per post</option>
+                <option value="#days">Day of week and hour</option>
+            </select>
+        </label>
     </header>
     <main>
         <ul>
@@ -72,13 +94,11 @@
                 Active users are broken down by year joined.
             </li>
             <li>
-                Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a> or <a
-                    href="https://github.com/klipspringr/mefi-activity/issues">open an
-                    issue</a>.
+                Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a> or
+                <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
                 <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not affiliated with
                 MetaFilter LLC.
             </li>
-
         </ul>
 
         <h2 id="users">Active users</h2>
@@ -96,7 +116,7 @@
         <h2 id="comments_per_user">Comments per active user</h2>
         <canvas id="chart_comments_per_user"></canvas>
 
-        <h2 id="comments_per_user">Comments per post</h2>
+        <h2 id="comments_per_post">Comments per post</h2>
         <canvas id="chart_comments_per_post"></canvas>
 
         <h2 id="days">Posts and comments by day of week</h2>
@@ -307,6 +327,8 @@
 
         document.getElementById("timestamp").innerText = TIMESTAMP
         document.getElementById("siteSelector").addEventListener("change", updateCharts)
+        location.hash && (document.getElementById("jumpSelector").value = location.hash)
+        document.getElementById("jumpSelector").addEventListener("change", (e) => location.hash = e.target.value)
         updateCharts()
     </script>
 </body>
