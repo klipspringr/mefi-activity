@@ -30,6 +30,14 @@
             margin: 0 0 10px 0;
         }
 
+        .white {
+            color: white;
+        }
+
+        .green {
+            color: rgb(156, 199, 84);
+        }
+
         select,
         option {
             font-size: large;
@@ -46,12 +54,9 @@
             margin: 8px 0 4px 0;
         }
 
-        .white {
-            color: white;
-        }
-
-        .green {
-            color: rgb(156, 199, 84);
+        ul {
+            margin-left: 0;
+            padding-left: 20px;
         }
     </style>
 </head>
@@ -91,8 +96,7 @@
                 Charts exclude the latest (incomplete) month.
             </li>
             <li>
-                A user is "active" if they made at least one post or comment on the selected subsite during the month.
-                Active users are broken down by year joined.
+                A user is "active" if they made at least one post or comment on the selected site(s) during the month.
             </li>
             <li>
                 Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a> or
@@ -140,50 +144,19 @@
         let site
 
         Chart.defaults.plugins.legend.display = false
+        Chart.defaults.plugins.legend.position = "bottom"
         Chart.defaults.scales.linear.beginAtZero = true
-
-        const updateCharts = () => {
-            site = document.getElementById("siteSelector").value
-
-            // set labels for monthly charts
-            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
-                charts[c].data.labels = MONTHLY[site].labels
-            }
-
-            // set chart data
-            charts["users"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
-            charts["users_years"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) =>
-                ({ label: "Joined " + year, data: counts.map((v, i) => (v / MONTHLY[site].users_total[i])) }))
-            charts["users_cumulative"].data.datasets[0].data = MONTHLY[site].users_cumulative
-            charts["users_cumulative"].data.datasets[1].data = MONTHLY[site].users_new
-            charts["posts"].data.datasets[0].data = MONTHLY[site].posts
-            charts["comments"].data.datasets[0].data = MONTHLY[site].comments
-            charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
-            charts["comments_per_user"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i]))
-            charts["comments_per_post"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i]))
-            charts["days"].data.datasets[0].data = DAILY[site].posts
-            charts["days"].data.datasets[1].data = DAILY[site].comments
-            charts["hours"].data.datasets[0].data = HOURLY[site].posts
-            charts["hours"].data.datasets[1].data = HOURLY[site].comments
-
-            // mefi posts per user is very high in early years, so truncate y-axis at 2
-            charts["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
-
-            Object.values(charts).forEach(c => c.update())
-        }
+        Chart.defaults.datasets.line.pointStyle = false
+        Chart.defaults.datasets.bar.barPercentage = 1
+        Chart.defaults.datasets.bar.categoryPercentage = 1
 
         const chartInit = (id, config) => charts[id] = new Chart(document.getElementById("chart_" + id), config)
+        const tooltipTotalUsers = (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
         const tooltipPerDay = (ctx) => "Per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
 
         chartInit("users", {
             type: 'bar',
             options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }
-                },
                 scales: {
                     y: {
                         stacked: true
@@ -195,21 +168,15 @@
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            afterTitle: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
+                            afterTitle: tooltipTotalUsers
                         }
                     },
-                }
+                },
             },
         })
         chartInit("users_years", {
             type: 'bar',
             options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }
-                },
                 scales: {
                     y: {
                         stacked: true,
@@ -226,13 +193,10 @@
                         stacked: true
                     }
                 },
-                animation: {
-                    numbers: true
-                },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            afterTitle: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex]),
+                            afterTitle: tooltipTotalUsers,
                         }
                     },
                 }
@@ -240,27 +204,21 @@
         })
         chartInit("users_cumulative", {
             data: {
-                datasets: [{
-                    type: "line",
-                    label: "Users ever active (LHS)",
-                    yAxisID: 'y_left',
-                },
-                {
-                    type: "bar",
-                    label: "Users first active (RHS)",
-                    yAxisID: 'y_right',
-                }],
+                datasets: [
+                    {
+                        type: "bar",
+                        label: "Users first active (LHS)",
+                        yAxisID: 'y_left',
+                        order: 1
+                    },
+                    {
+                        type: "line",
+                        label: "Users ever active (RHS)",
+                        yAxisID: 'y_right',
+                    }
+                ],
             },
             options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    },
-                    line: {
-                        pointStyle: false
-                    }
-                },
                 scales: {
                     y_left: {
                         type: 'linear',
@@ -272,9 +230,13 @@
                         display: true,
                         position: 'right',
                         grid: {
-                            drawOnChartArea: false, // only want the grid lines for one axis to show up
+                            drawOnChartArea: false,
                         },
                     },
+                },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
                 },
                 plugins: {
                     legend: {
@@ -291,12 +253,6 @@
                 }]
             },
             options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }
-                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -314,12 +270,6 @@
                 }]
             },
             options: {
-                datasets: {
-                    bar: {
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }
-                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -367,6 +317,12 @@
                 }]
             },
             options: {
+                datasets: {
+                    bar: {
+                        categoryPercentage: 0.8,
+                        barPercentage: 0.9
+                    }
+                },
                 scales: {
                     y: {
                         ticks: {
@@ -377,6 +333,10 @@
                             }
                         }
                     }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
                 },
                 plugins: {
                     legend: {
@@ -399,6 +359,12 @@
                 }]
             },
             options: {
+                datasets: {
+                    bar: {
+                        categoryPercentage: 0.8,
+                        barPercentage: 0.9
+                    }
+                },
                 scales: {
                     y: {
                         ticks: {
@@ -410,6 +376,10 @@
                         }
                     }
                 },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
                 plugins: {
                     legend: {
                         display: true
@@ -417,6 +387,37 @@
                 }
             },
         })
+
+        const updateCharts = () => {
+            site = document.getElementById("siteSelector").value
+
+            // set labels for monthly charts
+            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
+                charts[c].data.labels = MONTHLY[site].labels
+            }
+
+            // set chart data
+            charts["users"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
+            charts["users_years"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) =>
+                ({ label: "Joined " + year, data: counts.map((v, i) => (v / MONTHLY[site].users_total[i])) }))
+            charts["users_cumulative"].data.datasets[0].data = MONTHLY[site].users_new
+            charts["users_cumulative"].data.datasets[1].data = MONTHLY[site].users_cumulative
+            charts["posts"].data.datasets[0].data = MONTHLY[site].posts
+            charts["comments"].data.datasets[0].data = MONTHLY[site].comments
+            charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
+            charts["comments_per_user"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i]))
+            charts["comments_per_post"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i]))
+
+            // mefi posts per user is very high in early years, so truncate y-axis at 2
+            charts["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
+
+            charts["days"].data.datasets[0].data = DAILY[site].posts
+            charts["days"].data.datasets[1].data = DAILY[site].comments
+            charts["hours"].data.datasets[0].data = HOURLY[site].posts
+            charts["hours"].data.datasets[1].data = HOURLY[site].comments
+
+            Object.values(charts).forEach(c => c.update())
+        }
 
         document.getElementById("timestamp").innerText = TIMESTAMP
         document.getElementById("siteSelector").addEventListener("change", updateCharts)
