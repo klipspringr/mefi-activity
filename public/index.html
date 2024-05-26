@@ -43,6 +43,7 @@
         h2 {
             color: rgb(6, 90, 143);
             scroll-margin-top: 90px;
+            margin: 8px 0 4px 0;
         }
 
         .white {
@@ -72,7 +73,7 @@
         <label>Go:
             <select id="jumpSelector">
                 <option value="#top" selected>Top</option>
-                <option value="#users" selected>Active users</option>
+                <option value="#users">Active users</option>
                 <option value="#posts">Posts and comments</option>
                 <option value="#posts_per_user">Per active user</option>
                 <option value="#comments_per_post">Comments per post</option>
@@ -104,25 +105,31 @@
         <h2 id="users">Active users</h2>
         <canvas id="chart_users"></canvas>
 
+        <h2 id="users_years">Active users: by year joined</h2>
+        <canvas id="chart_users_years"></canvas>
+
+        <h2 id="users_cumulative">Active users: new and cumulative</h2>
+        <canvas id="chart_users_cumulative"></canvas>
+
         <h2 id="posts">Posts</h2>
         <canvas id="chart_posts"></canvas>
 
         <h2 id="comments">Comments</h2>
         <canvas id="chart_comments"></canvas>
 
-        <h2 id="posts_per_user">Posts per active user</h2>
+        <h2 id="posts_per_user">Posts: per active user</h2>
         <canvas id="chart_posts_per_user"></canvas>
 
-        <h2 id="comments_per_user">Comments per active user</h2>
+        <h2 id="comments_per_user">Comments: per active user</h2>
         <canvas id="chart_comments_per_user"></canvas>
 
-        <h2 id="comments_per_post">Comments per post</h2>
+        <h2 id="comments_per_post">Comments: per post</h2>
         <canvas id="chart_comments_per_post"></canvas>
 
-        <h2 id="days">Posts and comments by day of week</h2>
+        <h2 id="days">Posts and comments: by day of week</h2>
         <canvas id="chart_days"></canvas>
 
-        <h2 id="hours">Posts and comments by hour</h2>
+        <h2 id="hours">Posts and comments: by hour</h2>
         <canvas id="chart_hours"></canvas>
         <p>Timestamps are recorded on the MetaFilter server in Pacific Time.</p>
     </main>
@@ -139,12 +146,16 @@
             site = document.getElementById("siteSelector").value
 
             // set labels for monthly charts
-            for (const c of ["users", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
+            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
                 charts[c].data.labels = MONTHLY[site].labels
             }
 
             // set chart data
             charts["users"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
+            charts["users_years"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) =>
+                ({ label: "Joined " + year, data: counts.map((v, i) => (v / MONTHLY[site].users_total[i])) }))
+            charts["users_cumulative"].data.datasets[0].data = MONTHLY[site].users_cumulative
+            charts["users_cumulative"].data.datasets[1].data = MONTHLY[site].users_new
             charts["posts"].data.datasets[0].data = MONTHLY[site].posts
             charts["comments"].data.datasets[0].data = MONTHLY[site].comments
             charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
@@ -184,10 +195,92 @@
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            footer: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
+                            afterTitle: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
                         }
                     },
                 }
+            },
+        })
+        chartInit("users_years", {
+            type: 'bar',
+            options: {
+                datasets: {
+                    bar: {
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        stacked: true,
+                        max: 1,
+                        ticks: {
+                            format: {
+                                style: "percent",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 1
+                            }
+                        }
+                    },
+                    x: {
+                        stacked: true
+                    }
+                },
+                animation: {
+                    numbers: true
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterTitle: (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex]),
+                        }
+                    },
+                }
+            },
+        })
+        chartInit("users_cumulative", {
+            data: {
+                datasets: [{
+                    type: "line",
+                    label: "Users ever active (LHS)",
+                    yAxisID: 'y_left',
+                },
+                {
+                    type: "bar",
+                    label: "Users first active (RHS)",
+                    yAxisID: 'y_right',
+                }],
+            },
+            options: {
+                datasets: {
+                    bar: {
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    },
+                    line: {
+                        pointStyle: false
+                    }
+                },
+                scales: {
+                    y_left: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                    },
+                    y_right: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false, // only want the grid lines for one axis to show up
+                        },
+                    },
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
             },
         })
         chartInit("posts", {

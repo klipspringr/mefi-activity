@@ -116,18 +116,27 @@ def main():
         "comments": [],
         "users_total": [],
         "users_by_year": { year: [0] * len(monthly[s]) for year in JOIN_YEARS},
+        "users_cumulative": [],
+        "users_new": []
         } for s in SITES + ["all"] }
     
     for s in SITES + ["all"]:
+        users_ever_active = set()
         for i, c in enumerate(monthly[s].values()):
             monthly_summary[s]["posts"].append(c["posts"])
             monthly_summary[s]["comments"].append(c["comments"])
             monthly_summary[s]["users_total"].append(len(c["users"]))
+
+            before = len(users_ever_active)
             for user_id in c["users"]:
                 # a few user_ids are not real: see https://mefiwiki.com/wiki/Infodump#Userid_munging
                 if user_id in user_joined:
                     join_year = user_joined[user_id]
                     monthly_summary[s]["users_by_year"][join_year][i] += 1
+                    users_ever_active.add(user_id)
+
+            monthly_summary[s]["users_cumulative"].append(len(users_ever_active))
+            monthly_summary[s]["users_new"].append(len(users_ever_active) - before)
 
         for type in ["posts", "comments"]:
             sum_daily = sum(daily[s][type])
