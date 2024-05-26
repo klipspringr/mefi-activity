@@ -159,9 +159,14 @@
         let site
 
         Chart.defaults.animation = false
-        Chart.defaults.scales.linear.beginAtZero = true
+        Chart.defaults.parsing = false
 
-        //Chart.defaults.scales.timeseries.time.unit = "year"
+        Chart.defaults.scales.linear.beginAtZero = true
+        Chart.defaults.scales.timeseries.grid = { display: false }
+        Chart.defaults.scales.timeseries.ticks.callback = (v, i, t) => {
+            const d = new Date(v)
+            return d.getMonth() == 6 ? d.getFullYear() : undefined
+        }
         Chart.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
 
         Chart.defaults.datasets.line.pointStyle = false
@@ -327,7 +332,11 @@
                     x: {
                         type: "timeseries",
                     }
-                }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
             }
         })
         chartInit("comments_per_user", {
@@ -342,7 +351,11 @@
                     x: {
                         type: "timeseries",
                     }
-                }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
             }
 
         })
@@ -358,7 +371,11 @@
                     x: {
                         type: "timeseries",
                     }
-                }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
             }
         })
         chartInit("days", {
@@ -375,6 +392,7 @@
                 }]
             },
             options: {
+                parsing: true,
                 datasets: {
                     bar: {
                         categoryPercentage: 0.8,
@@ -417,6 +435,7 @@
                 }]
             },
             options: {
+                parsing: true,
                 datasets: {
                     bar: {
                         categoryPercentage: 0.8,
