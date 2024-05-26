@@ -176,9 +176,11 @@
         Chart.defaults.plugins.legend.display = false
         Chart.defaults.plugins.legend.position = "bottom"
 
+        const numberFormatter = Intl.NumberFormat()
+
         const chartInit = (id, config) => charts[id] = new Chart(document.getElementById("chart_" + id), config)
-        const tooltipTotalUsers = (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
-        const tooltipPerDay = (ctx) => "Per day: " + Intl.NumberFormat().format(Math.round(ctx[0].parsed.y / (365 / 12)))
+        const tooltipTotalUsers = (ctx) => "Total active users: " + numberFormatter.format(MONTHLY[site].users_total[ctx[0].dataIndex])
+        const tooltipPerDay = (ctx) => "Per day: " + numberFormatter.format(Math.round(ctx[0].parsed.y / (365 / 12)))
 
         chartInit("users", {
             type: 'bar',
