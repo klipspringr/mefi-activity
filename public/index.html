@@ -6,6 +6,8 @@
     <title>MetaFilter activity stats</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="data.js"></script>
     <style>
         html,
@@ -18,7 +20,7 @@
         header {
             position: sticky;
             top: 0;
-            padding: 10px;
+            padding: 4px 10px;
             background-color: rgb(6, 90, 143);
             font-weight: 600;
             color: #FFFFFF;
@@ -28,6 +30,10 @@
             font-size: x-large;
             color: rgb(136, 194, 216);
             margin: 0 0 10px 0;
+        }
+
+        header p {
+            margin: 6px 0;
         }
 
         .white {
@@ -41,7 +47,6 @@
         select,
         option {
             font-size: large;
-            max-width: 10rem;
         }
 
         main {
@@ -50,7 +55,7 @@
 
         h2 {
             color: rgb(6, 90, 143);
-            scroll-margin-top: 90px;
+            scroll-margin-top: 110px;
             margin: 8px 0 4px 0;
         }
 
@@ -63,9 +68,12 @@
 
 <body>
     <header>
-        <h1><span class="white">Meta</span><span class="green">Filter</span> activity stats</h1>
-        <label>Site:
-            <select id="siteSelector">
+        <h1>
+            <span class="white">Meta</span><span class="green">Filter</span> activity stats
+        </h1>
+        <p>
+            Filter:
+            <select id="site">
                 <option value="all" selected>All sites</option>
                 <option value="mefi">MetaFilter</option>
                 <option value="askme">AskMe</option>
@@ -73,10 +81,17 @@
                 <option value="fanfare">Fanfare</option>
                 <option value="music">Music</option>
             </select>
-        </label>
-        &middot;
-        <label>Go:
-            <select id="jumpSelector">
+            <select id="minimumYear">
+                <option value="0" selected>All time</option>
+                <option value="2005">Since 2005</option>
+                <option value="2010">Since 2010</option>
+                <option value="2015">Since 2015</option>
+                <option value="2020">Since 2020</option>
+            </select>
+        </p>
+        <p>
+            Go:
+            <select id="go">
                 <option value="#top" selected>Top</option>
                 <option value="#users">Active users</option>
                 <option value="#posts">Posts and comments</option>
@@ -84,7 +99,7 @@
                 <option value="#comments_per_post">Comments per post</option>
                 <option value="#days">Day of week and hour</option>
             </select>
-        </label>
+        </p>
     </header>
     <main>
         <ul>
@@ -143,12 +158,18 @@
         const charts = {}
         let site
 
-        Chart.defaults.plugins.legend.display = false
-        Chart.defaults.plugins.legend.position = "bottom"
+        Chart.defaults.animation = false
         Chart.defaults.scales.linear.beginAtZero = true
+
+        //Chart.defaults.scales.timeseries.time.unit = "year"
+        Chart.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
+
         Chart.defaults.datasets.line.pointStyle = false
         Chart.defaults.datasets.bar.barPercentage = 1
         Chart.defaults.datasets.bar.categoryPercentage = 1
+
+        Chart.defaults.plugins.legend.display = false
+        Chart.defaults.plugins.legend.position = "bottom"
 
         const chartInit = (id, config) => charts[id] = new Chart(document.getElementById("chart_" + id), config)
         const tooltipTotalUsers = (ctx) => "Total active users: " + Intl.NumberFormat().format(MONTHLY[site].users_total[ctx[0].dataIndex])
@@ -162,7 +183,8 @@
                         stacked: true
                     },
                     x: {
-                        stacked: true
+                        stacked: true,
+                        type: "timeseries",
                     }
                 },
                 plugins: {
@@ -190,7 +212,8 @@
                         }
                     },
                     x: {
-                        stacked: true
+                        stacked: true,
+                        type: "timeseries",
                     }
                 },
                 plugins: {
@@ -233,6 +256,9 @@
                             drawOnChartArea: false,
                         },
                     },
+                    x: {
+                        type: "timeseries",
+                    }
                 },
                 interaction: {
                     intersect: false,
@@ -253,6 +279,11 @@
                 }]
             },
             options: {
+                scales: {
+                    x: {
+                        type: "timeseries",
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -270,6 +301,11 @@
                 }]
             },
             options: {
+                scales: {
+                    x: {
+                        type: "timeseries",
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -286,6 +322,13 @@
                     borderColor: 'rgb(255, 99, 132)',
                 }]
             },
+            options: {
+                scales: {
+                    x: {
+                        type: "timeseries",
+                    }
+                }
+            }
         })
         chartInit("comments_per_user", {
             type: 'line',
@@ -294,6 +337,14 @@
                     borderColor: 'rgb(153, 102, 255)',
                 }]
             },
+            options: {
+                scales: {
+                    x: {
+                        type: "timeseries",
+                    }
+                }
+            }
+
         })
         chartInit("comments_per_post", {
             type: 'line',
@@ -302,6 +353,13 @@
                     borderColor: 'rgb(153, 102, 255)',
                 }]
             },
+            options: {
+                scales: {
+                    x: {
+                        type: "timeseries",
+                    }
+                }
+            }
         })
         chartInit("days", {
             type: 'bar',
@@ -388,25 +446,38 @@
             },
         })
 
-        const updateCharts = () => {
-            site = document.getElementById("siteSelector").value
-
-            // set labels for monthly charts
+        const applyMinimumYear = (minYear) => {
             for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
-                charts[c].data.labels = MONTHLY[site].labels
+                charts[c].options.scales.x.min = minYear > 0 ? new Date(minYear, 0, 1).getTime() : undefined
+                charts[c].update()
             }
+        }
+
+        const applyMonthlyData = (chartId, datasetIndex, datasetSource, labelSource) => {
+            charts[chartId].data.datasets[datasetIndex].data = datasetSource.map((v, i) => ({
+                x: labelSource[i],
+                y: v
+            }))
+        }
+
+        const updateCharts = () => {
+            const months = Array(MONTHLY[site].users_total.length).fill(0).map((_, i) => (new Date(MONTHLY[site].epoch_year, MONTHLY[site].epoch_month + i - 1, 1)).getTime())
 
             // set chart data
-            charts["users"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) => ({ label: "Joined " + year, data: counts }))
-            charts["users_years"].data.datasets = Object.entries(MONTHLY[site].users_by_year).map(([year, counts]) =>
-                ({ label: "Joined " + year, data: counts.map((v, i) => (v / MONTHLY[site].users_total[i])) }))
-            charts["users_cumulative"].data.datasets[0].data = MONTHLY[site].users_new
-            charts["users_cumulative"].data.datasets[1].data = MONTHLY[site].users_cumulative
-            charts["posts"].data.datasets[0].data = MONTHLY[site].posts
-            charts["comments"].data.datasets[0].data = MONTHLY[site].comments
-            charts["posts_per_user"].data.datasets[0].data = MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i]))
-            charts["comments_per_user"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i]))
-            charts["comments_per_post"].data.datasets[0].data = MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i]))
+            charts["users"].data.datasets = Object.keys(MONTHLY[site].users_by_year).map((year) => ({ label: "Joined " + year }))
+            charts["users_years"].data.datasets = Object.keys(MONTHLY[site].users_by_year).map((year) => ({ label: "Joined " + year }))
+            Object.entries(MONTHLY[site].users_by_year).forEach(([year, counts], i) => {
+                applyMonthlyData("users", i, counts, months, "Joined " + year)
+                applyMonthlyData("users_years", i, counts.map((v, i) => (v / MONTHLY[site].users_total[i])), months, "Joined" + year)
+            })
+
+            applyMonthlyData("users_cumulative", 0, MONTHLY[site].users_new, months)
+            applyMonthlyData("users_cumulative", 1, MONTHLY[site].users_cumulative, months)
+            applyMonthlyData("posts", 0, MONTHLY[site].posts, months)
+            applyMonthlyData("comments", 0, MONTHLY[site].comments, months)
+            applyMonthlyData("posts_per_user", 0, MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i])), months)
+            applyMonthlyData("comments_per_user", 0, MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].users_total[i])), months)
+            applyMonthlyData("comments_per_post", 0, MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i])), months)
 
             // mefi posts per user is very high in early years, so truncate y-axis at 2
             charts["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
@@ -420,9 +491,17 @@
         }
 
         document.getElementById("timestamp").innerText = TIMESTAMP
-        document.getElementById("siteSelector").addEventListener("change", updateCharts)
-        location.hash && (document.getElementById("jumpSelector").value = location.hash)
-        document.getElementById("jumpSelector").addEventListener("change", (e) => location.hash = e.target.value)
+        document.getElementById("site").addEventListener("change", (e) => {
+            site = e.target.value
+            updateCharts()
+        })
+        document.getElementById("minimumYear").addEventListener("change", (e) =>
+            applyMinimumYear(parseInt(e.target.value)))
+
+        location.hash && (document.getElementById("go").value = location.hash)
+        document.getElementById("go").addEventListener("change", (e) => location.hash = e.target.value)
+
+        site = document.getElementById("site").value
         updateCharts()
     </script>
 </body>

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from collections import defaultdict
 from datetime import datetime
 from io import BytesIO
 from string import Template
@@ -69,7 +68,7 @@ def main():
     for user_id, raw_date, _ in get_infodump_file("usernames"):
         user_joined[user_id] = raw_date[7:11]
 
-    monthly_counter = {site: defaultdict(lambda: { "posts": 0, "comments": 0, "users": set() }) for site in SITES + ["all"]}
+    monthly = {site: { "epoch_year": None, "epoch_month": None } for site in SITES + ["all"]}
     daily = {site: { "posts": [0] * 7, "comments": [0] * 7 } for site in SITES + ["all"]}
     hourly = {site: { "posts": [0] * 24, "comments": [0] * 24 } for site in SITES + ["all"]}
 
@@ -88,14 +87,28 @@ def main():
         if date.year == infodump_date.year and date.month == infodump_date.month:
             return False # stop parsing when we hit month of infodump timestamp
         
-        month_label = raw_date[7:11] + " " + raw_date[0:3]
         for s in [site, "all"]:
-            monthly_counter[s][month_label][type] += 1
-            hourly[s][type][date.hour] += 1
-            daily[s][type][date.weekday()] += 1
+            if monthly[s]["epoch_year"] == None:
+                monthly[s]["epoch_year"] = date.year
+                monthly[s]["epoch_month"] = date.month
+                # add 1 to count first month, but take off 1 as don't want last (incomplete) month
+                num_months = (infodump_date.year - date.year) * 12 + (infodump_date.month - date.month)
+                monthly[s]["posts"] = [0] * num_months
+                monthly[s]["comments"] = [0] * num_months
+                monthly[s]["users_set"] = [set() for _ in range(num_months)]
+                monthly[s]["users_total"] = [0] * num_months
+                monthly[s]["users_by_year"] = {year: [0] * num_months for year in JOIN_YEARS}
+                monthly[s]["users_cumulative"] = [0] * num_months
+                monthly[s]["users_new"] = [0] * num_months
+
+            month_key = (date.year - monthly[s]["epoch_year"]) * 12 + (date.month - monthly[s]["epoch_month"])
+            monthly[s][type][month_key] += 1
             # only store user_id if it's not munged: see https://mefiwiki.com/wiki/Infodump#Userid_munging
             if user_id in user_joined:
-                monthly_counter[s][month_label]["users"].add(user_id)
+                monthly[s]["users_set"][month_key].add(user_id)
+
+            hourly[s][type][date.hour] += 1
+            daily[s][type][date.weekday()] += 1
 
         return True
 
@@ -111,38 +124,28 @@ def main():
             if not parse_line(site, "comments", raw_date, user_id):
                 break
     
-    # transform counter data into efficient json representation for charts
-    monthly = {s: {
-        "labels": list(monthly_counter[s].keys()),
-        "posts": [],
-        "comments": [],
-        "users_total": [0] * len(monthly_counter[s]),
-        "users_by_year": { year: [0] * len(monthly_counter[s]) for year in JOIN_YEARS},
-        "users_cumulative": [],
-        "users_new": []
-        } for s in SITES + ["all"] }
-    
     for s in SITES + ["all"]:
+        # calculate users totals, by join year, cumulative and new
         users_ever_active = set()
-        for month_index, counts in enumerate(monthly_counter[s].values()):
-            monthly[s]["posts"].append(counts["posts"])
-            monthly[s]["comments"].append(counts["comments"])
+        for month_index, users in enumerate(monthly[s]["users_set"]):
+            users_ever_active_previous = len(users_ever_active)
 
-            before = len(users_ever_active)
-            for user_id in counts["users"]:
+            for user_id in users:
                 join_year = user_joined[user_id]
                 monthly[s]["users_by_year"][join_year][month_index] += 1
                 monthly[s]["users_total"][month_index] += 1
                 users_ever_active.add(user_id)
 
-            monthly[s]["users_cumulative"].append(len(users_ever_active))
-            monthly[s]["users_new"].append(len(users_ever_active) - before)
+            monthly[s]["users_cumulative"][month_index] = len(users_ever_active)
+            monthly[s]["users_new"][month_index] = len(users_ever_active) - users_ever_active_previous
 
+        del monthly[s]["users_set"]
+
+        # divide daily and hourly activity by weekly/daily total
         for type in ["posts", "comments"]:
-            sum_daily = sum(daily[s][type])
-            sum_hourly = sum(hourly[s][type])
-            daily[s][type] = [round(x / sum_daily, 4) for x in daily[s][type]]
-            hourly[s][type] = [round(x / sum_hourly, 4) for x in hourly[s][type]]
+            total = sum(daily[s][type])
+            daily[s][type] = [round(x / total, 4) for x in daily[s][type]]
+            hourly[s][type] = [round(x / total, 4) for x in hourly[s][type]]
 
     with open(TEMPLATE_PATH, "r") as t:
         template = Template(t.read())
