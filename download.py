@@ -13,15 +13,15 @@ import re
 import sys
 
 SITES = ["mefi", "askme", "meta", "fanfare", "music"]
-JOIN_YEARS = [str(year) for year in range(2000, datetime.now().year + 1)] # first users join date Jan 27 2000 in DB
+JOIN_YEARS = [str(year) for year in range(2000, datetime.now().year + 1)] # DB stores first users' join date as Jan 27 2000
 MONTHS = { "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6, "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12 }
 
 INFODUMP_HOMEPAGE = "https://stuff.metafilter.com/infodump/"
 INFODUMP_BASE = "https://mefi.us/infodump/"
 HEADERS = { "User-Agent": "github.com/klipspringr/mefi-activity" }
 
-CACHE_DIR = "cached_infodump"
-TEMPLATE_PATH = "template.js"
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cached_infodump")
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "template.js")
 
 def get_infodump_timestamp():
     with urlopen(Request(INFODUMP_HOMEPAGE, headers=HEADERS)) as f:
@@ -69,7 +69,7 @@ def main():
     for user_id, raw_date, _ in get_infodump_file("usernames"):
         user_joined[user_id] = raw_date[7:11]
 
-    monthly = {site: defaultdict(lambda: { "posts": 0, "comments": 0, "users": set() }) for site in SITES + ["all"]}
+    monthly_counter = {site: defaultdict(lambda: { "posts": 0, "comments": 0, "users": set() }) for site in SITES + ["all"]}
     daily = {site: { "posts": [0] * 7, "comments": [0] * 7 } for site in SITES + ["all"]}
     hourly = {site: { "posts": [0] * 24, "comments": [0] * 24 } for site in SITES + ["all"]}
 
@@ -79,7 +79,7 @@ def main():
         return hour + 12 if pm else hour
 
     def parse_line(site, type, raw_date, user_id):
-        # let's manually parse the date because strptime is so slow. Raw: "Jun 29 2006 08:10:14:467PM"
+        # let's manually parse date because strptime is so slow. Format: "Jun 29 2006 08:10:14:467PM"
         date = datetime(int(raw_date[7:11]),
                         MONTHS[raw_date[0:3]],
                         int(raw_date[4:6]),
@@ -90,10 +90,12 @@ def main():
         
         month_label = raw_date[7:11] + " " + raw_date[0:3]
         for s in [site, "all"]:
-            monthly[s][month_label][type] += 1
-            monthly[s][month_label]["users"].add(user_id)
+            monthly_counter[s][month_label][type] += 1
             hourly[s][type][date.hour] += 1
             daily[s][type][date.weekday()] += 1
+            # only store user_id if it's not munged: see https://mefiwiki.com/wiki/Infodump#Userid_munging
+            if user_id in user_joined:
+                monthly_counter[s][month_label]["users"].add(user_id)
 
         return True
 
@@ -110,33 +112,31 @@ def main():
                 break
     
     # transform counter data into efficient json representation for charts
-    monthly_summary = {s: {
-        "labels": list(monthly[s].keys()),
+    monthly = {s: {
+        "labels": list(monthly_counter[s].keys()),
         "posts": [],
         "comments": [],
-        "users_total": [0] * len(monthly[s]),
-        "users_by_year": { year: [0] * len(monthly[s]) for year in JOIN_YEARS},
+        "users_total": [0] * len(monthly_counter[s]),
+        "users_by_year": { year: [0] * len(monthly_counter[s]) for year in JOIN_YEARS},
         "users_cumulative": [],
         "users_new": []
         } for s in SITES + ["all"] }
     
     for s in SITES + ["all"]:
         users_ever_active = set()
-        for i, c in enumerate(monthly[s].values()):
-            monthly_summary[s]["posts"].append(c["posts"])
-            monthly_summary[s]["comments"].append(c["comments"])
+        for month_index, counts in enumerate(monthly_counter[s].values()):
+            monthly[s]["posts"].append(counts["posts"])
+            monthly[s]["comments"].append(counts["comments"])
 
             before = len(users_ever_active)
-            for user_id in c["users"]:
-                # a few user_ids are not real: see https://mefiwiki.com/wiki/Infodump#Userid_munging
-                if user_id in user_joined:
-                    join_year = user_joined[user_id]
-                    monthly_summary[s]["users_by_year"][join_year][i] += 1
-                    monthly_summary[s]["users_total"][i] += 1
-                    users_ever_active.add(user_id)
+            for user_id in counts["users"]:
+                join_year = user_joined[user_id]
+                monthly[s]["users_by_year"][join_year][month_index] += 1
+                monthly[s]["users_total"][month_index] += 1
+                users_ever_active.add(user_id)
 
-            monthly_summary[s]["users_cumulative"].append(len(users_ever_active))
-            monthly_summary[s]["users_new"].append(len(users_ever_active) - before)
+            monthly[s]["users_cumulative"].append(len(users_ever_active))
+            monthly[s]["users_new"].append(len(users_ever_active) - before)
 
         for type in ["posts", "comments"]:
             sum_daily = sum(daily[s][type])
@@ -148,7 +148,7 @@ def main():
         template = Template(t.read())
         result = template.substitute(
             infodump_timestamp=infodump_timestamp,
-            monthly=json.dumps(monthly_summary),
+            monthly=json.dumps(monthly),
             daily=json.dumps(daily),
             hourly=json.dumps(hourly))
         with open(args.output_path, "w") as o:
