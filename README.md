@@ -1,6 +1,6 @@
 # MetaFilter activity stats
 
-Available at <https://klipspringr.github.io/mefi-activity/>
+Available at [mefist.at](https://mefist.at/)
 
 To remind myself how this works in future:
 
