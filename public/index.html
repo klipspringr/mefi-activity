@@ -22,26 +22,30 @@
             top: 0;
             padding: 4px 10px;
             background-color: rgb(6, 90, 143);
+            color: white;
             font-weight: 600;
-            color: #FFFFFF;
+            user-select: none;
         }
 
         header h1 {
-            font-size: x-large;
-            color: rgb(136, 194, 216);
             margin: 0 0 10px 0;
+            font-size: x-large;
         }
 
-        header p {
-            margin: 6px 0;
+        .fade {
+            color: rgb(136, 194, 216);
         }
 
-        .white {
-            color: white;
+        .sub {
+            font-weight: 600;
         }
 
         .green {
             color: rgb(156, 199, 84);
+        }
+
+        header p {
+            margin: 6px 0;
         }
 
         select,
@@ -69,7 +73,8 @@
 <body>
     <header>
         <h1>
-            <span class="white">Meta</span><span class="green">Filter</span> activity stats
+            me<span class="green">fi</span><span class="fade">st.at</span> <span class="sub">MetaFilter activity
+                stats</span>
         </h1>
         <p>
             Filter:
@@ -136,6 +141,13 @@
         <h2 id="comments">Comments</h2>
         <canvas id="chart_comments"></canvas>
 
+        <h2 id="activity_by_age">Posts and comments by age of user account</h2>
+        <canvas id="chart_activity_by_age"></canvas>
+        <p>
+            User account age at time of posting or commenting. Initially the database did not record join date; the
+            first ~200 users are assumed to have joined on 27 January 2000.
+        </p>
+
         <h2 id="posts_per_user">Posts: per active user</h2>
         <canvas id="chart_posts_per_user"></canvas>
 
@@ -155,7 +167,7 @@
 
     <script>
         "use strict"
-        const charts = {}
+        const CHARTS = {}
         let site
 
         Chart.defaults.animation = false
@@ -176,11 +188,12 @@
         Chart.defaults.plugins.legend.display = false
         Chart.defaults.plugins.legend.position = "bottom"
 
-        const numberFormatter = Intl.NumberFormat()
+        const NUM_FORMAT = Intl.NumberFormat()
+        const AGE_LABELS = { 0: "< 1 year", 1: "1-5 years", 5: "5-10 years", 10: "10-15 years", 15: ">15 years" }
 
-        const chartInit = (id, config) => charts[id] = new Chart(document.getElementById("chart_" + id), config)
-        const tooltipTotalUsers = (ctx) => "Total active users: " + numberFormatter.format(MONTHLY[site].users_total[ctx[0].dataIndex])
-        const tooltipPerDay = (ctx) => "Per day: " + numberFormatter.format(Math.round(ctx[0].parsed.y / (365 / 12)))
+        const chartInit = (id, config) => CHARTS[id] = new Chart(document.getElementById("chart_" + id), config)
+        const tooltipTotalUsers = (ctx) => "Total active users: " + NUM_FORMAT.format(MONTHLY[site].users_total[ctx[0].dataIndex])
+        const tooltipPerDay = (ctx) => "Per day: " + NUM_FORMAT.format(Math.round(ctx[0].parsed.y / (365 / 12)))
 
         chartInit("users", {
             type: 'bar',
@@ -318,6 +331,37 @@
                 }
             },
         })
+        chartInit("activity_by_age", {
+            type: 'bar',
+            options: {
+                scales: {
+                    y: {
+                        stacked: true,
+                        max: 1,
+                        ticks: {
+                            format: {
+                                style: "percent",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 1
+                            }
+                        }
+                    },
+                    x: {
+                        stacked: true,
+                        type: "timeseries",
+                    }
+                },
+                interaction: {
+                    mode: "index"
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            },
+        })
+
         chartInit("posts_per_user", {
             type: 'line',
             data: {
@@ -449,32 +493,45 @@
         })
 
         const applyMinimumYear = (minYear) => {
-            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "posts_per_user", "comments_per_user", "comments_per_post"]) {
-                charts[c].options.scales.x.min = minYear > 0 ? new Date(minYear, 0, 1).getTime() : undefined
-                charts[c].update()
+            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "activity_by_age", "posts_per_user", "comments_per_user", "comments_per_post"]) {
+                CHARTS[c].options.scales.x.min = minYear > 0 ? new Date(minYear, 0, 1).getTime() : undefined
+                CHARTS[c].update()
             }
         }
 
-        const applyMonthlyData = (chartId, datasetIndex, datasetSource, labelSource) => {
-            charts[chartId].data.datasets[datasetIndex].data = datasetSource.map((v, i) => ({
+        const applyMonthlyData = (chartId, datasetIndex, datasetSource, labelSource, datasetLabel = undefined) => {
+            if (datasetIndex === CHARTS[chartId].data.datasets.length) {
+                CHARTS[chartId].data.datasets.push({})
+            }
+            CHARTS[chartId].data.datasets[datasetIndex].data = datasetSource.map((v, i) => ({
                 x: labelSource[i],
                 y: v
             }))
+            if (datasetLabel) {
+                CHARTS[chartId].data.datasets[datasetIndex].label = datasetLabel
+            }
         }
 
         const updateCharts = () => {
-            const months = Array(MONTHLY[site].users_total.length).fill(0).map((_, i) => (new Date(MONTHLY[site].epoch_year, MONTHLY[site].epoch_month + i - 1, 1)).getTime())
+            const months = Array(MONTHLY[site].users_total.length).fill(0).map((_, i) =>
+                (new Date(MONTHLY[site].epoch_year, MONTHLY[site].epoch_month + i - 1, 1)).getTime())
 
             // set chart data
-            charts["users"].data.datasets = Object.keys(MONTHLY[site].users_by_year).map((year) => ({ label: "Joined " + year }))
-            charts["users_years"].data.datasets = Object.keys(MONTHLY[site].users_by_year).map((year) => ({ label: "Joined " + year }))
+            CHARTS["users"].data.datasets = []
+            CHARTS["users_years"].data.datasets = []
             Object.entries(MONTHLY[site].users_by_year).forEach(([year, counts], i) => {
                 applyMonthlyData("users", i, counts, months, "Joined " + year)
-                applyMonthlyData("users_years", i, counts.map((v, i) => (v / MONTHLY[site].users_total[i])), months, "Joined" + year)
+                applyMonthlyData("users_years", i, counts.map((v, i) => (v / MONTHLY[site].users_total[i])), months, "Joined " + year)
             })
 
             applyMonthlyData("users_cumulative", 0, MONTHLY[site].users_new, months)
             applyMonthlyData("users_cumulative", 1, MONTHLY[site].users_cumulative, months)
+
+            CHARTS["activity_by_age"].data.datasets = []
+            Object.entries(MONTHLY[site].activity_by_age).forEach(([cutoff, counts], i) => {
+                applyMonthlyData("activity_by_age", i, counts, months, AGE_LABELS[cutoff])
+            })
+
             applyMonthlyData("posts", 0, MONTHLY[site].posts, months)
             applyMonthlyData("comments", 0, MONTHLY[site].comments, months)
             applyMonthlyData("posts_per_user", 0, MONTHLY[site].posts.map((v, i) => (v / MONTHLY[site].users_total[i])), months)
@@ -482,14 +539,14 @@
             applyMonthlyData("comments_per_post", 0, MONTHLY[site].comments.map((v, i) => (v / MONTHLY[site].posts[i])), months)
 
             // mefi posts per user is very high in early years, so truncate y-axis at 2
-            charts["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
+            CHARTS["posts_per_user"].options.scales.y.max = (site === "all" || site === "mefi") ? 2 : undefined
 
-            charts["days"].data.datasets[0].data = DAILY[site].posts
-            charts["days"].data.datasets[1].data = DAILY[site].comments
-            charts["hours"].data.datasets[0].data = HOURLY[site].posts
-            charts["hours"].data.datasets[1].data = HOURLY[site].comments
+            CHARTS["days"].data.datasets[0].data = DAILY[site].posts
+            CHARTS["days"].data.datasets[1].data = DAILY[site].comments
+            CHARTS["hours"].data.datasets[0].data = HOURLY[site].posts
+            CHARTS["hours"].data.datasets[1].data = HOURLY[site].comments
 
-            Object.values(charts).forEach(c => c.update())
+            Object.values(CHARTS).forEach(c => c.update())
         }
 
         document.getElementById("timestamp").innerText = TIMESTAMP
