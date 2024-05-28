@@ -17,10 +17,20 @@
             margin: 0;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media(prefers-reduced-motion) {
+            html {
+                scroll-behavior: auto;
+            }
+        }
+
         header {
             position: sticky;
             top: 0;
-            padding: 4px 10px;
+            padding: 4px 10px 10px 10px;
             background-color: rgb(6, 90, 143);
             color: white;
             font-weight: 600;
@@ -29,28 +39,24 @@
 
         header h1 {
             margin: 0 0 10px 0;
-            font-size: x-large;
-        }
-
-        .fade {
-            color: rgb(136, 194, 216);
-        }
-
-        .sub {
             font-weight: 600;
+            font-size: x-large;
         }
 
         .green {
             color: rgb(156, 199, 84);
         }
 
-        header p {
-            margin: 6px 0;
+        header div {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgb(136, 194, 216);
         }
 
         select,
         option {
             font-size: large;
+            max-width: 7rem;
         }
 
         main {
@@ -59,7 +65,7 @@
 
         h2 {
             color: rgb(6, 90, 143);
-            scroll-margin-top: 110px;
+            scroll-margin-top: 90px;
             margin: 8px 0 4px 0;
         }
 
@@ -73,11 +79,10 @@
 <body>
     <header>
         <h1>
-            me<span class="green">fi</span><span class="fade">st.at</span> <span class="sub">MetaFilter activity
-                stats</span>
+            MetaFilter <span class="green">activity stats</span>
         </h1>
-        <p>
-            Filter:
+        <div>
+            Filter
             <select id="site">
                 <option value="all" selected>All sites</option>
                 <option value="mefi">MetaFilter</option>
@@ -88,23 +93,20 @@
             </select>
             <select id="minimumYear">
                 <option value="0" selected>All time</option>
-                <option value="2005">Since 2005</option>
-                <option value="2010">Since 2010</option>
-                <option value="2015">Since 2015</option>
-                <option value="2020">Since 2020</option>
+                <option value="2005">&ge; 2005</option>
+                <option value="2010">&ge; 2010</option>
+                <option value="2015">&ge; 2015</option>
+                <option value="2020">&ge; 2020</option>
             </select>
-        </p>
-        <p>
-            Go:
+            &vellip;
             <select id="go">
-                <option value="#top" selected>Top</option>
-                <option value="#users">Active users</option>
+                <option value="" selected>Jump to</option>
+                <option value="#top">Top (active users)</option>
                 <option value="#posts">Posts and comments</option>
-                <option value="#posts_per_user">Per active user</option>
-                <option value="#comments_per_post">Comments per post</option>
+                <option value="#activity_by_age">Activity per user</option>
                 <option value="#days">Day of week and hour</option>
             </select>
-        </p>
+        </div>
     </header>
     <main>
         <ul>
@@ -144,8 +146,7 @@
         <h2 id="activity_by_age">Posts and comments by age of user account</h2>
         <canvas id="chart_activity_by_age"></canvas>
         <p>
-            User account age at time of posting or commenting. Initially the database did not record join date; the
-            first ~200 users are assumed to have joined on 27 January 2000.
+            User account age at time of posting or commenting. Join dates start at 27 Jan 2000.
         </p>
 
         <h2 id="posts_per_user">Posts: per active user</h2>
@@ -493,9 +494,11 @@
         })
 
         const applyMinimumYear = (minYear) => {
-            for (const c of ["users", "users_years", "users_cumulative", "posts", "comments", "activity_by_age", "posts_per_user", "comments_per_user", "comments_per_post"]) {
-                CHARTS[c].options.scales.x.min = minYear > 0 ? new Date(minYear, 0, 1).getTime() : undefined
-                CHARTS[c].update()
+            for (const [id, chart] of Object.entries(CHARTS)) {
+                if (id !== "days" && id !== "hours") {
+                    chart.options.scales.x.min = minYear > 0 ? new Date(minYear, 0, 1).getTime() : undefined
+                    chart.update()
+                }
             }
         }
 
@@ -557,8 +560,12 @@
         document.getElementById("minimumYear").addEventListener("change", (e) =>
             applyMinimumYear(parseInt(e.target.value)))
 
-        location.hash && (document.getElementById("go").value = location.hash)
-        document.getElementById("go").addEventListener("change", (e) => location.hash = e.target.value)
+        document.getElementById("go").addEventListener("change", (e) => {
+            if (e.target.value) {
+                location.hash = e.target.value
+                e.target.value = ""
+            }
+        })
 
         site = document.getElementById("site").value
         updateCharts()

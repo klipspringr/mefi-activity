@@ -14,7 +14,7 @@ import sys
 SITES = ["mefi", "askme", "meta", "fanfare", "music"]
 JOIN_YEARS = [
     year for year in range(2000, datetime.now().year + 1)
-]  # DB stores early users' join date as Jan 27 2000
+]  # DB stores first users' join date as Jan 27 2000
 AGE_CUTOFFS = [15, 10, 5, 1, 0]
 MONTHS = {
     "Jan": 1,
@@ -78,7 +78,8 @@ def main():
         js_timestamp = None
         if os.path.exists(args.output_path):
             with open(args.output_path, "r") as f:
-                js_timestamp = re.search('TIMESTAMP = "(.+)"', f.readline()).group(1)
+                if match := re.search('TIMESTAMP = "(.+)"', f.readline()):
+                    js_timestamp = match.group(1)
         if infodump_timestamp == js_timestamp:
             print("infodump unchanged")
             sys.exit(0)
@@ -102,7 +103,11 @@ def main():
             return 12 if pm else 0
         return hour + 12 if pm else hour
 
+    # return True to keep parsing, False to stop
     def parse_line(site, type, raw_date, user_id):
+        if user_id not in user_joined:
+            return True  # stop parsing if user is not in usernames.txt
+
         # let's manually parse date because strptime is so slow. Format: "Jun 29 2006 08:10:14:467PM"
         date = datetime(
             int(raw_date[7:11]),
@@ -125,7 +130,7 @@ def main():
                 monthly[s]["posts"] = [0] * num_months
                 monthly[s]["comments"] = [0] * num_months
                 monthly[s]["activity_by_age"] = {
-                    cutoff: [0] * num_months for cutoff in AGE_CUTOFFS + [999]
+                    cutoff: [0] * num_months for cutoff in AGE_CUTOFFS
                 }
                 monthly[s]["users_set"] = [set() for _ in range(num_months)]
                 monthly[s]["users_total"] = [0] * num_months
@@ -139,15 +144,13 @@ def main():
                 date.month - monthly[s]["epoch_month"]
             )
             monthly[s][type][month_key] += 1
-            if user_id in user_joined:
-                monthly[s]["users_set"][month_key].add(user_id)
-                # calculate user age based on join date. can be negative for 1999 users, so set a min of 0.
-                user_age = max((date - user_joined[user_id]).days / 365.25, 0)
-                for cutoff in AGE_CUTOFFS:
-                    if user_age >= cutoff:
-                        monthly[s]["activity_by_age"][cutoff][month_key] += 1
-                        break
-
+            monthly[s]["users_set"][month_key].add(user_id)
+            # calculate user age based on join date. can be negative for 1999 users, so set a min of 0.
+            user_age = max((date - user_joined[user_id]).days / 365.25, 0)
+            for cutoff in AGE_CUTOFFS:
+                if user_age >= cutoff:
+                    monthly[s]["activity_by_age"][cutoff][month_key] += 1
+                    break
             hourly[s][type][date.hour] += 1
             daily[s][type][date.weekday()] += 1
 
