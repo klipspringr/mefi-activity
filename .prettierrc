@@ -5,12 +5,24 @@
 	"endOfLine": "lf",
 	"htmlWhitespaceSensitivity": "css",
 	"printWidth": 120,
-	"proseWrap": "always",
+	"proseWrap": "preserve",
 	"quoteProps": "as-needed",
 	"semi": false,
 	"singleAttributePerLine": false,
 	"singleQuote": false,
 	"tabWidth": 4,
 	"trailingComma": "es5",
-	"useTabs": false
+	"useTabs": false,
+	"plugins": [
+		"prettier-plugin-svelte",
+		"prettier-plugin-tailwindcss"
+	],
+	"overrides": [
+		{
+			"files": "*.svelte",
+			"options": {
+				"parser": "svelte"
+			}
+		}
+	]
 }

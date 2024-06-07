@@ -2,17 +2,26 @@
 
 Available at [mefist.at](https://mefist.at/)
 
-To remind myself how this works in future:
+This is a personal side project. Issues and comments are welcome. I'm not looking for pull requests.
 
-- `infodump` GitHub workflow calls `download.py` daily
-- `download.py` checks "last updated" timestamp on [infodump page](https://stuff.metafilter.com/infodump/). We expect updates every month or two
-- if new infodump, download post data, comment data, and usernames
-- parse into `public/data.js` and push to repo
-- pushes trigger the `deploy` workflow to upload `public/` to GitHub pages
-- in order for automated pushes from `infodump` to trigger `deploy`, a Personal Access Token must be stored in a `INFODUMP_ACCESS_TOKEN` repo secret
+To remind myself how it works in future:
 
-For local development, manually download `postdata_*.txt.zip`, `commentdata_*.txt.zip` and `usernames.txt.zip`. Unzip and store in `cached_infodump/`. `download.py` reads these files, to avoid downloading infodump content every time.
+## GitHub scheduled action
 
-In live usage, the `infodump` workflow calls `download.py` with the `--live` arg.
+- `infodump` workflow calls `parser/download.py` regularly
+- script checks "last updated" timestamp on [Infodump homepage](https://stuff.metafilter.com/infodump/). We expect updates every few months
+- if a new Infodump is available, download postdata, commentdata, and usernames to `infodump/`, and parse into `src/data/data.json`
+- push json to repo
+- for pushes to trigger a deployment, a Personal Access Token must be stored in a `INFODUMP_ACCESS_TOKEN` repo secret
 
-We only download infodump data if the page timestamp indicates the data is new.
+## Static frontend
+
+- pushes trigger the `deploy` workflow to `pnpm build` the site and upload to GitHub pages
+
+## Local development
+
+- create a venv and `pip install -r parser/requirements.txt`
+- run `python parser/download.py -f infodump src/data/data.json`
+- we only download Infodump files from the MetaFilter server (a) on first run, or (b) if a new Infodump has been published
+- `-f|--force-parse` forces a re-parse even if Infodump data has not changed; useful if `parse.py` has been edited
+- `notebook.ipynb` makes testing polars expressions easier. It is not used in "production". Install Jupyter kernel requirements from `parser/requirements_notebook.txt`
