@@ -156,8 +156,10 @@
     <header class="sticky top-0 z-20 select-none">
         <div class="flex h-10 items-center bg-mefi-blue text-white">
             <h1 class="grow pl-4 text-lg xs:text-2xl">
-                <span class="font-semibold uppercase">MetaFilter</span>
-                <span class="font-black tracking-wider text-mefi-green">Activity Stats</span>
+                <a href="/" class="no-underline">
+                    <span class="font-semibold uppercase">MetaFilter</span>
+                    <span class="font-black tracking-wider text-mefi-green">Activity Stats</span>
+                </a>
             </h1>
             <button class="h-full pl-2 pr-4 hover:text-mefi-paler" on:click={() => (showJumpMenu = !showJumpMenu)}>
                 <svg width="2rem" height="2rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -397,6 +399,7 @@
                     scales: {
                         x: {
                             type: "timeseries",
+                            min: timeSeriesMin,
                         },
                         y: {
                             ticks: {
@@ -792,7 +795,8 @@
         @apply mt-4 text-base uppercase tracking-[0.15em] text-mefi-pale;
     }
 
-    a {
+    section a,
+    menu a {
         @apply p-px font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
     }
 
