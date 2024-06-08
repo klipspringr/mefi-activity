@@ -16,6 +16,10 @@ def date_parser(col_name):
     ).str.to_datetime("%b %_d %Y %I:%M:%S%p", time_unit="ms")
 
 
+def extract_year(col_name):
+    return col(col_name).dt.year()
+
+
 def extract_month(col_name):
     return pl.date(col(col_name).dt.year(), col(col_name).dt.month(), 1)
 
@@ -36,7 +40,7 @@ def load_dfs(
         )
         .with_columns(date_parser("joindate"))
         .with_columns(
-            joinyear=col("joindate").dt.year(), joinmonth=extract_month("joindate")
+            joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
         )
     )
 
@@ -120,10 +124,23 @@ def load_dfs(
             .otherwise(col("joindate"))
         )
         .with_columns(
-            joinyear=col("joindate").dt.year(), joinmonth=extract_month("joindate")
+            joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
         )
         .drop("datestamp")
     )
+
+    # a small number of users made posts/comments but are not in df_users. create records for them, using date of first post/comment as joindate
+    df_users.extend(
+        df_activity_all.join(df_users, on="userid", how="anti")
+        .sort("datestamp")
+        .unique("userid", keep="first")
+        .select(
+            col("userid"),
+            joindate=col("datestamp"),
+            joinyear=extract_year("datestamp"),
+            joinmonth=extract_month("datestamp"),
+        )
+    ).sort("userid")
 
     df_months_all = pl.DataFrame(
         {
@@ -251,7 +268,6 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                     col("joinyear").filter(joinyear=year).count().alias(str(year))
                     for year in range_joinyears
                 ),
-                unknown=col("joinyear").null_count(),
             )
             .drop("month")
         )

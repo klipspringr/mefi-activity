@@ -29,7 +29,7 @@ def download_file(filename, infodump_dir):
             zip.extract(filename + ".txt", infodump_dir)
 
 
-def download_infodump(force_parse, infodump_dir, output_path):
+def download_infodump(dev, infodump_dir, output_path):
     publication_timestamp = get_publication_timestamp()
 
     download_required = True
@@ -41,13 +41,18 @@ def download_infodump(force_parse, infodump_dir, output_path):
                 KEY_TIMESTAMP in last_json
                 and last_json[KEY_TIMESTAMP] == publication_timestamp
             ):
-                print("No new infodump")
+                print(
+                    f"Latest Infodump ({publication_timestamp}) already parsed to {output_path}"
+                )
                 download_required = False
 
-    if download_required:
-        print("Download infodump")
-        if not os.path.exists(infodump_dir):
-            print(f"Create dir {infodump_dir}")
+    # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
+    if download_required or (
+        dev and not os.path.exists(os.path.join(infodump_dir, "usernames.txt"))
+    ):
+        print("Download Infodump")
+        if not os.path.isdir(infodump_dir):
+            print(f'Create dir "{infodump_dir}"')
             os.mkdir(infodump_dir)
         else:
             print(f'Delete "{infodump_dir}/*.txt"')
@@ -59,15 +64,15 @@ def download_infodump(force_parse, infodump_dir, output_path):
             download_file(f"postdata_{site}", infodump_dir)
             download_file(f"commentdata_{site}", infodump_dir)
 
-    if download_required or force_parse:
+    if download_required or dev:
         print(f'Parsing data from "{infodump_dir}" to "{output_path}"')
         parse(infodump_dir, output_path, publication_timestamp)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--force-parse", action="store_true")
+    parser.add_argument("-d", "--dev", action="store_true")
     parser.add_argument("infodump_dir")
     parser.add_argument("output_path")
     args = parser.parse_args()
-    download_infodump(args.force_parse, args.infodump_dir, args.output_path)
+    download_infodump(args.dev, args.infodump_dir, args.output_path)

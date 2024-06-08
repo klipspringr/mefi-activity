@@ -21,7 +21,6 @@ To remind myself how it works in future:
 ## Local development
 
 - create a venv and `pip install -r parser/requirements.txt`
-- run `python parser/download.py -f infodump src/data/data.json`
-- we only download Infodump files from the MetaFilter server (a) on first run, or (b) if a new Infodump has been published
-- `-f|--force-parse` forces a re-parse even if Infodump data has not changed; useful if `parse.py` has been edited
+- run `python parser/download.py -d infodump src/data/data.json`
+- with the `-d|--dev` flag, we (a) download Infodump data on first run (but not subsequently, unless a new Infodump is published), and (b) always regenerate the json
 - `notebook.ipynb` makes testing polars expressions easier. It is not used in "production". Install Jupyter kernel requirements from `parser/requirements_notebook.txt`
