@@ -67,15 +67,15 @@
 
     const NUM_FORMAT = Intl.NumberFormat()
 
+    const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
+    const BAR_CHART_TYPE = "bar" as ChartType
+
     let chartsSectionElement: HTMLElement
     let showJumpMenu = false
 
     let filterSite: keyof typeof SITES = "all"
     let filterTimeSeries: string
     let timeSeriesMin: number | undefined
-
-    const lineChartType = "line" as ChartType // stop TypeScript complaining
-    const barChartType = "bar" as ChartType
 
     ChartJS.defaults.animation = false
     ChartJS.defaults.responsive = true
@@ -156,7 +156,7 @@
     <header class="sticky top-0 z-20 select-none">
         <div class="flex h-10 items-center bg-mefi-blue text-white">
             <h1 class="grow pl-4 text-lg xs:text-2xl">
-                <a href="/" class="no-underline">
+                <a href="/">
                     <span class="font-semibold uppercase">MetaFilter</span>
                     <span class="font-black tracking-wider text-mefi-green">Activity Stats</span>
                 </a>
@@ -345,49 +345,49 @@
                     labels: timeSeriesLabels["all"],
                     datasets: [
                         {
-                            type: barChartType,
+                            type: BAR_CHART_TYPE,
                             label: "Registered users",
                             data: json["all"].users_registered_cum,
                             backgroundColor: COLORS.users_registered,
                             order: 10,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on any site`,
                             data: json["all"].users_cum,
                             borderColor: COLORS.site_all,
                             backgroundColor: COLORS.site_all,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on MeFi`,
                             data: padSeriesLeft("mefi", json["mefi"].users_cum),
                             borderColor: COLORS.site_mefi,
                             backgroundColor: COLORS.site_mefi,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on AskMe`,
                             data: padSeriesLeft("askme", json["askme"].users_cum),
                             borderColor: COLORS.site_askme,
                             backgroundColor: COLORS.site_askme,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on MeTa`,
                             data: padSeriesLeft("meta", json["meta"].users_cum),
                             borderColor: COLORS.site_meta,
                             backgroundColor: COLORS.site_meta,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on Fanfare`,
                             data: padSeriesLeft("fanfare", json["fanfare"].users_cum),
                             borderColor: COLORS.site_fanfare,
                             backgroundColor: COLORS.site_fanfare,
                         },
                         {
-                            type: lineChartType,
+                            type: LINE_CHART_TYPE,
                             label: `Active on Music`,
                             data: padSeriesLeft("music", json["music"].users_cum),
                             borderColor: COLORS.site_music,
@@ -736,19 +736,22 @@
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <menu
-    class="fixed right-0 top-0 z-50 h-screen max-w-[85vw] overflow-y-auto border-l-4 border-mefi-blue bg-white p-4 text-lg transition-all duration-300 ease-in-out"
+    class="fixed right-0 top-0 z-50 h-screen max-w-[85vw] overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
     class:translate-x-0={showJumpMenu}
     class:translate-x-full={!showJumpMenu}
-    on:click={() => (showJumpMenu = false)}>
+    class:border-l-4={showJumpMenu}>
     <ul class="space-y-1">
         <li><h2 class="!mt-0 !text-mefi-blue">Jump to chart</h2></li>
-        <li><a href="#top" class="block">Top</a></li>
+        <li><a href="#top" class="block" on:click={() => (showJumpMenu = false)}>Top</a></li>
         {#each chartsSectionElement?.querySelectorAll("h2, h3") || [] as h}
             <li>
                 {#if h.tagName === "H2"}
-                    <h2>{h.innerHTML}</h2>
+                    <h2>{h.childNodes[0].textContent}</h2>
                 {:else if h.tagName === "H3"}
-                    <a href="#{toAnchor(h.childNodes[0].textContent)}" class="block">{h.childNodes[0].textContent}</a>
+                    <a
+                        href="#{toAnchor(h.childNodes[0].textContent)}"
+                        class="block"
+                        on:click={() => (showJumpMenu = false)}>{h.childNodes[0].textContent}</a>
                 {/if}
             </li>
         {/each}
@@ -797,7 +800,7 @@
 
     section a,
     menu a {
-        @apply p-px font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
+        @apply font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
     }
 
     header select,
