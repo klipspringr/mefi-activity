@@ -69,6 +69,7 @@
     const NUMBER_FORMAT = Intl.NumberFormat()
     const PERCENT_FORMAT = Intl.NumberFormat(undefined, { style: "percent", minimumFractionDigits: 1 })
     const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
+    const HOUR_FORMAT = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
 
     const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
     const BAR_CHART_TYPE = "bar" as ChartType
@@ -214,7 +215,7 @@
     </section>
 
     <section bind:this={chartsSectionElement}>
-        <h2 class="!mt-4">Users</h2>
+        <h2 class="!mt-0">Users</h2>
 
         <ChartTitle text="Monthly active users" />
         <div class="chart-container">
@@ -793,7 +794,7 @@
         <div class="chart-container">
             <Bar
                 data={{
-                    labels: [...Array(24).keys()],
+                    labels: Array.from({ length: 24 }, (_, i) => HOUR_FORMAT.format(i * 60 * 60 * 1000)),
                     datasets: [
                         {
                             label: "Posts",
@@ -873,16 +874,12 @@
 {/if}
 
 <style lang="postcss">
-    :global(body) {
-        @apply pb-4;
-    }
-
     :global(h1, h2, h3) {
         @apply select-none font-black;
     }
 
     section {
-        @apply px-2 sm:px-4;
+        @apply px-2 pb-4 sm:px-4;
     }
 
     section h2 {
