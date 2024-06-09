@@ -131,7 +131,8 @@ def load_dfs(
 
     # a small number of users made posts/comments but are not in df_users. create records for them, using date of first post/comment as joindate
     df_users.extend(
-        df_activity_all.join(df_users, on="userid", how="anti")
+        df_activity_all.select("userid", "datestamp")
+        .join(df_users, on="userid", how="anti")
         .sort("datestamp")
         .unique("userid", keep="first")
         .select(
@@ -140,7 +141,7 @@ def load_dfs(
             joinyear=extract_year("datestamp"),
             joinmonth=extract_month("datestamp"),
         )
-    ).sort("userid")
+    )
 
     df_months_all = pl.DataFrame(
         {
@@ -243,17 +244,23 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             ).to_list()
 
         df_users_monthly = (
-            df_months.join(df_activity, on="month", how="left", coalesce=True)
+            df_months.join(
+                df_activity.select("userid", "month"),
+                on="month",
+                how="left",
+                coalesce=True,
+            )
             .unique(["userid", "month"])
             .sort("month")
         )
 
-        out[site]["users_monthly"] = (
-            df_users_monthly.group_by("month")
-            .agg(col("userid").n_unique())
-            .get_column("userid")
-            .to_list()
+        df_users_monthly_unique = df_users_monthly.group_by("month").agg(
+            col("userid").n_unique()
         )
+
+        out[site]["users_monthly"] = df_users_monthly_unique.get_column(
+            "userid"
+        ).to_list()
 
         df_users_monthly_by_joined = (
             df_users_monthly.join(
@@ -287,7 +294,12 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
         ]
 
         df_activity_by_age = (
-            df_months.join(df_activity, on="month", how="left", coalesce=True)
+            df_months.join(
+                df_activity.select("userid", "datestamp", "month"),
+                on="month",
+                how="left",
+                coalesce=True,
+            )
             .join(
                 df_users.select("userid", "joindate"),
                 on="userid",
@@ -309,7 +321,12 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
         ]
 
         df_first_active = (
-            df_months.join(df_activity, on="month", how="left", coalesce=True)
+            df_months.join(
+                df_activity.select("userid", "month"),
+                on="month",
+                how="left",
+                coalesce=True,
+            )
             .unique("userid", keep="first")
             .sort("month")
             .group_by("month")
@@ -326,19 +343,26 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
 
         out[site]["users_cum"] = df_users_cum.get_column("cum").to_list()
 
-        out[site]["posts_deleted"] = (
-            df_months.join(df_posts, on="month", how="left", coalesce=True)
+        df_posts_deleted = (
+            df_months.join(
+                df_posts.select("month", "deleted"),
+                on="month",
+                how="left",
+                coalesce=True,
+            )
             .group_by("month")
             .agg(
                 col("deleted").filter(col("deleted").is_in([1, 3])).len()
             )  # 1: deleted, 3: deleted and closed on Metatalk
-            .get_column("deleted")
-            .to_list()
         )
+
+        out[site]["posts_deleted"] = df_posts_deleted.get_column("deleted").to_list()
 
         for label, df in {"posts": df_posts, "comments": df_comments}.items():
             out[site][label] = (
-                df_months.join(df, on="month", how="left", coalesce=True)
+                df_months.join(
+                    df.select("month"), on="month", how="left", coalesce=True
+                )
                 .group_by("month")
                 .agg(pl.len())
                 .get_column("len")
@@ -346,8 +370,9 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             )
 
             out[site][f"{label}_weekdays_percent"] = (
-                df.group_by(col("datestamp").dt.weekday().alias("weekday"))
-                .agg(pl.len())
+                df.select("datestamp")
+                .group_by(col("datestamp").dt.weekday().alias("weekday"))
+                .len()
                 .sort(by="weekday")
                 .select((col("len") / pl.sum("len")).round(4).alias("percent"))
                 .get_column("percent")
@@ -355,13 +380,44 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             )
 
             out[site][f"{label}_hours_percent"] = (
-                df.group_by(col("datestamp").dt.hour().alias("hour"))
-                .agg(pl.len())
+                df.select("datestamp")
+                .group_by(col("datestamp").dt.hour().alias("hour"))
+                .len()
                 .sort(by="hour")
                 .select((col("len") / pl.sum("len")).round(4).alias("percent"))
                 .get_column("percent")
                 .to_list()
             )
+
+            # need to keep js TOPN_LABELS in sync with this
+            topN = [0.01, 0.05, 0.1]
+
+            df_activity_by_top_users = (
+                df_months.join(
+                    df.select("month", "userid"), on="month", how="left", coalesce=True
+                )
+                .group_by("month")
+                .agg(
+                    pl.len(),
+                    col("userid").unique_counts().alias("counts").sort(descending=True),
+                )
+                .select(
+                    (
+                        col("counts").list.head(col("counts").list.len() * n).list.sum()
+                        / col("len")
+                    ).alias(str(n))
+                    for n in topN
+                )
+                .with_columns(
+                    (col(str(topN[i])) - col(str(topN[i - 1])))
+                    for i in range(1, len(topN))
+                )
+                .select(pl.all().round(3))
+            )
+
+            out[site][f"{label}_top_users"] = [
+                c.to_list() for c in df_activity_by_top_users.get_columns()
+            ]
 
     Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 

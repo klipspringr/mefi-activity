@@ -49,6 +49,7 @@
     const SITES_KEYS = Object.keys(SITES) as Array<keyof typeof SITES>
     const TIMESERIES_FILTERS = ["All time", "Since 2010", "Last 10 years", "Last 2 years"]
     const AGE_LABELS = ["<1 year", "1-5 years", "5-10 years", "10-15 years", "15+ years"]
+    const TOPN_LABELS = ["Top 1%", "Top 5%", "Top 10%"]
 
     const COLORS = {
         posts: "rgb(6, 90, 143)",
@@ -65,7 +66,9 @@
         site_music: "rgb(255, 99, 132)",
     }
 
-    const NUM_FORMAT = Intl.NumberFormat()
+    const NUMBER_FORMAT = Intl.NumberFormat()
+    const PERCENT_FORMAT = Intl.NumberFormat(undefined, { style: "percent", minimumFractionDigits: 1 })
+    const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
 
     const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
     const BAR_CHART_TYPE = "bar" as ChartType
@@ -111,13 +114,21 @@
         ])
     )
 
-    const tickThousands = (v: string | number) => (typeof v === "number" && v >= 1000 ? v / 1000 + "K" : v)
+    const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
     const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
-        "Total monthly active: " + NUM_FORMAT.format(json[filterSite].users_monthly[ctx[0].dataIndex])
+        "Total monthly active: " + NUMBER_FORMAT.format(json[filterSite].users_monthly[ctx[0].dataIndex])
 
     const tooltipPerDay = (ctx: TooltipItem<"bar">[]) =>
-        "Per day: " + NUM_FORMAT.format(Math.round(ctx[0].parsed.y / (365 / 12)))
+        "Per day: " + NUMBER_FORMAT.format(Math.round(ctx[0].parsed.y / (365 / 12)))
+
+    const tooltipCumulative = (ctx: TooltipItem<"bar">) =>
+        `${ctx.dataset.label}: ${PERCENT_FORMAT.format(
+            Array.from({ length: ctx.datasetIndex + 1 }, (_, i) => ctx.parsed._stacks?.["y"][i] ?? 0).reduce(
+                (t, c) => t + c,
+                0
+            )
+        )}`
 
     const padSeriesLeft = (site: keyof typeof SITES, series: number[]) =>
         Array(timeSeriesLabels["all"].length - timeSeriesLabels[site].length)
@@ -220,7 +231,7 @@
                         y: {
                             stacked: true,
                             ticks: {
-                                callback: tickThousands,
+                                callback: tickCompact,
                             },
                         },
                         x: {
@@ -308,7 +319,7 @@
                             type: "linear",
                             position: "left",
                             ticks: {
-                                callback: tickThousands,
+                                callback: tickCompact,
                             },
                         },
                         y_new: {
@@ -318,7 +329,7 @@
                                 drawOnChartArea: false,
                             },
                             ticks: {
-                                callback: tickThousands,
+                                callback: tickCompact,
                             },
                         },
                         x: {
@@ -403,7 +414,7 @@
                         },
                         y: {
                             ticks: {
-                                callback: tickThousands,
+                                callback: tickCompact,
                             },
                         },
                     },
@@ -418,63 +429,8 @@
                 }} />
         </div>
 
-        <h2>Posts and comments</h2>
+        <h2>Activity distribution</h2>
 
-        <ChartTitle text="Posts" />
-        <div class="chart-container">
-            <Bar
-                data={{
-                    labels: timeSeriesLabels[filterSite],
-                    datasets: [
-                        {
-                            data: json[filterSite].posts,
-                            backgroundColor: COLORS.posts,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: {
-                            ticks: {
-                                callback: tickThousands,
-                            },
-                        },
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                footer: tooltipPerDay,
-                            },
-                        },
-                    },
-                }} />
-        </div>
-        <ChartTitle text="Comments" />
-        <div class="chart-container">
-            <Bar
-                data={{
-                    labels: timeSeriesLabels[filterSite],
-                    datasets: [{ data: json[filterSite].comments, backgroundColor: COLORS.comments }],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: {
-                            ticks: {
-                                callback: tickThousands,
-                            },
-                        },
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                footer: tooltipPerDay,
-                            },
-                        },
-                    },
-                }} />
-        </div>
         <ChartTitle text="Posts and comments by user account age" />
         <div class="chart-container-tall">
             <Bar
@@ -515,6 +471,156 @@
                 }} />
         </div>
         <p class="note">User account age at time of posting or commenting.</p>
+
+        <ChartTitle text="Posts by most active posters" />
+        <div class="chart-container">
+            <Bar
+                data={{
+                    labels: timeSeriesLabels[filterSite],
+                    datasets: json[filterSite].posts_top_users.map((counts, i) => ({
+                        label: TOPN_LABELS[i],
+                        data: counts,
+                    })),
+                }}
+                options={{
+                    scales: {
+                        y: {
+                            stacked: true,
+                            max: 0.6,
+                            ticks: {
+                                format: {
+                                    style: "percent",
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 1,
+                                },
+                            },
+                        },
+                        x: {
+                            stacked: true,
+                            type: "timeseries",
+                            min: timeSeriesMin,
+                        },
+                    },
+                    interaction: {
+                        mode: "index",
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: tooltipCumulative,
+                            },
+                        },
+                    },
+                }} />
+        </div>
+        <p class="note">Percentage of posts made by the <i>n</i> per cent of users who made the most posts.</p>
+
+        <ChartTitle text="Comments by most active commenters" />
+        <div class="chart-container">
+            <Bar
+                data={{
+                    labels: timeSeriesLabels[filterSite],
+                    datasets: json[filterSite].comments_top_users.map((counts, i) => ({
+                        label: TOPN_LABELS[i],
+                        data: counts,
+                    })),
+                }}
+                options={{
+                    scales: {
+                        y: {
+                            stacked: true,
+                            max: 0.7,
+                            ticks: {
+                                format: {
+                                    style: "percent",
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 1,
+                                },
+                            },
+                        },
+                        x: {
+                            stacked: true,
+                            type: "timeseries",
+                            min: timeSeriesMin,
+                        },
+                    },
+                    interaction: {
+                        mode: "index",
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: tooltipCumulative,
+                            },
+                        },
+                    },
+                }} />
+        </div>
+        <p class="note">Percentage of comments made by the <i>n</i> per cent of users who made the most comments.</p>
+
+        <h2>Posts and comments</h2>
+
+        <ChartTitle text="Posts" />
+        <div class="chart-container">
+            <Bar
+                data={{
+                    labels: timeSeriesLabels[filterSite],
+                    datasets: [
+                        {
+                            data: json[filterSite].posts,
+                            backgroundColor: COLORS.posts,
+                        },
+                    ],
+                }}
+                options={{
+                    scales: {
+                        x: { type: "timeseries", min: timeSeriesMin },
+                        y: {
+                            ticks: {
+                                callback: tickCompact,
+                            },
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                footer: tooltipPerDay,
+                            },
+                        },
+                    },
+                }} />
+        </div>
+        <ChartTitle text="Comments" />
+        <div class="chart-container">
+            <Bar
+                data={{
+                    labels: timeSeriesLabels[filterSite],
+                    datasets: [{ data: json[filterSite].comments, backgroundColor: COLORS.comments }],
+                }}
+                options={{
+                    scales: {
+                        x: { type: "timeseries", min: timeSeriesMin },
+                        y: {
+                            ticks: {
+                                callback: tickCompact,
+                            },
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                footer: tooltipPerDay,
+                            },
+                        },
+                    },
+                }} />
+        </div>
 
         <ChartTitle text="Posts per active user" />
         <div class="chart-container">
@@ -617,9 +723,10 @@
                         tooltip: {
                             callbacks: {
                                 afterTitle: (ctx) => [
-                                    "Deleted: " + NUM_FORMAT.format(json[filterSite].posts_deleted[ctx[0].dataIndex]),
+                                    "Deleted: " +
+                                        NUMBER_FORMAT.format(json[filterSite].posts_deleted[ctx[0].dataIndex]),
                                     "Total: " +
-                                        NUM_FORMAT.format(
+                                        NUMBER_FORMAT.format(
                                             (filterSite === "all" ? totalPostsExAskMe : json[filterSite].posts)[
                                                 ctx[0].dataIndex
                                             ]
