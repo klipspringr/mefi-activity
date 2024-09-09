@@ -44,6 +44,6 @@ jobs:
                   git config --global user.email 'mefi-activity-automated'
                   git add src/data/data.json
                   if ! git diff-index --quiet HEAD; then
-                    git commit -m "Infodump update"
+                    git commit -m "Infodump updated: $(jq -r "._published" src/data/data.json)"
                     git push
                   fi
