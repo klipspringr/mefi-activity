@@ -320,22 +320,16 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             c.to_list() for c in df_activity_by_age.get_columns()
         ]
 
-        df_first_active = (
+        df_users_new = (
             df_months.join(
-                df_activity.select("userid", "month"),
+                df_activity.select("userid", "month").unique("userid", keep="first"),
                 on="month",
                 how="left",
                 coalesce=True,
             )
-            .unique("userid", keep="first")
-            .sort("month")
             .group_by("month")
-            .agg(col("userid"))
+            .agg(new=col("userid").count())
         )
-
-        df_users_new = df_months.join(
-            df_first_active, on="month", how="left", coalesce=True
-        ).select("month", new=col("userid").list.len())
 
         out[site]["users_new"] = df_users_new.get_column("new").to_list()
 
