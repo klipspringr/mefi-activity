@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Tuple
 
 import polars as pl
-from config import KEY_TIMESTAMP, SITES
+from config import ACTIVITY_LEVELS, AGE_THRESHOLDS, KEY_TIMESTAMP, SITES, TOP_N
 from polars import Boolean, DataFrame, Enum, UInt8, UInt32, col, lit
 
 
@@ -248,17 +248,20 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                 how="left",
                 coalesce=True,
             )
-            .unique(["userid", "month"])
-            .sort("month")
+            .group_by(["month", "userid"], maintain_order=True)
+            .agg(count=col("userid").count())
         )
 
-        df_users_monthly_unique = df_users_monthly.group_by("month").agg(
-            col("userid").n_unique()
+        df_users_monthly_activity = df_users_monthly.group_by("month").agg(
+            (
+                col("count").filter(col("count") >= level).count().alias(str(level))
+                for level in ACTIVITY_LEVELS
+            )
         )
 
-        out[site]["users_monthly"] = df_users_monthly_unique.get_column(
-            "userid"
-        ).to_list()
+        out[site]["users_monthly"] = [
+            c.to_list() for c in df_users_monthly_activity.drop("month").get_columns()
+        ]
 
         df_users_monthly_by_joined = (
             df_users_monthly.join(
@@ -281,16 +284,6 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             as_series=False
         )
 
-        # need to keep js AGE_LABELS in sync with this
-        bins = [
-            0,
-            365,
-            365 * 5,
-            365 * 10,
-            365 * 15,
-            365 * 100,
-        ]
-
         df_activity_by_age = (
             df_months.join(
                 df_activity.select("userid", "datestamp", "month"),
@@ -306,11 +299,13 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             )
             .with_columns(age=(col("datestamp") - col("joindate")).dt.total_days())
             .with_columns(
-                col("age").is_between(bins[i], bins[i + 1], closed="left").alias(str(i))
-                for i in range(len(bins) - 1)
+                col("age")
+                .is_between(AGE_THRESHOLDS[i], AGE_THRESHOLDS[i + 1], closed="left")
+                .alias(str(i))
+                for i in range(len(AGE_THRESHOLDS) - 1)
             )
             .group_by("month")
-            .agg(col(str(i)).sum() for i in range(len(bins) - 1))
+            .agg(col(str(i)).sum() for i in range(len(AGE_THRESHOLDS) - 1))
             .drop("month")
         )
 
@@ -381,9 +376,6 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                 .to_list()
             )
 
-            # need to keep js TOPN_LABELS in sync with this
-            topN = [0.01, 0.05, 0.1]
-
             df_activity_by_top_users = (
                 df_months.join(
                     df.select("month", "userid"), on="month", how="left", coalesce=True
@@ -398,11 +390,11 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                         col("counts").list.head(col("counts").list.len() * n).list.sum()
                         / col("len")
                     ).alias(str(n))
-                    for n in topN
+                    for n in TOP_N
                 )
                 .with_columns(
-                    (col(str(topN[i])) - col(str(topN[i - 1])))
-                    for i in range(1, len(topN))
+                    (col(str(TOP_N[i])) - col(str(TOP_N[i - 1])))
+                    for i in range(1, len(TOP_N))
                 )
                 .select(pl.all().round(3))
             )
