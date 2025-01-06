@@ -36,7 +36,9 @@ jobs:
               run: pip install -r parser/requirements.txt
 
             - name: Check for Infodump updates
-              run: python parser/download.py infodump src/data/data.json
+              env:
+                  USER_AGENT: ${{ secrets.USER_AGENT }}
+              run: python parser/download.py "$USER_AGENT" infodump src/data/data.json
 
             - name: Push any update
               run: |
