@@ -15,7 +15,6 @@
         TimeSeriesScale,
         Tooltip,
         type ActiveElement,
-        type ChartType,
         type Point,
         type TooltipItem,
     } from "chart.js"
@@ -66,13 +65,10 @@
         site_music: "rgb(255, 99, 132)",
     }
 
-    const NUMBER_FORMAT = Intl.NumberFormat()
+    const NUMBER_FORMAT = Intl.NumberFormat(undefined, { useGrouping: true })
     const PERCENT_FORMAT = Intl.NumberFormat(undefined, { style: "percent", minimumFractionDigits: 1 })
     const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
     const HOUR_FORMAT = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
-
-    const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
-    const BAR_CHART_TYPE = "bar" as ChartType
 
     let chartsSectionElement: HTMLElement
     let showJumpMenu = false
@@ -202,22 +198,30 @@
     </header>
 
     <section>
-        <h2 class="!mb-2 !mt-2">Notes</h2>
+        <h2 class="!my-2">Notes</h2>
         <ul class="ml-6 list-outside list-disc marker:text-mefi-blue">
             <li>
-                <a href="https://stuff.metafilter.com/infodump/">Infodump</a> data from
+                Data from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published on
                 <strong>{json._published}</strong>. Infodump updates show here within 24 hours.
             </li>
             <li>
-                <b>Active users</b> made at least <b>one post or comment</b> on the selected site in the month.
-                <b>Registered users</b> completed the sign-up process.
+                Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a>
+                or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
+                <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not affiliated with
+                MetaFilter LLC.
             </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2 class="!my-2">Definitions</h2>
+        <ul class="ml-6 list-outside list-disc marker:text-mefi-blue">
             <li>
-                Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a> or
-                <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a> on
-                <a href="https://github.com/klipspringr/mefi-activity">GitHub</a>.
-                <b>Not affiliated with MetaFilter LLC.</b>
+                <strong>Active users</strong> made at least <strong>one post or comment</strong> on the selected site in
+                a given month.
             </li>
+            <li><strong>Registered users</strong> completed the signup process.</li>
+            <li><strong>Post and comment timestamps</strong> are Pacific Time.</li>
         </ul>
     </section>
 
@@ -236,25 +240,10 @@
                 }}
                 options={{
                     scales: {
-                        y: {
-                            stacked: true,
-                            ticks: {
-                                callback: tickCompact,
-                            },
-                        },
-                        x: {
-                            stacked: true,
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        y: { stacked: true, ticks: { callback: tickCompact } },
+                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                afterTitle: tooltipUsersTotal,
-                            },
-                        },
-                    },
+                    plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
                 }} />
         </div>
 
@@ -273,27 +262,11 @@
                         y: {
                             stacked: true,
                             max: 1,
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
-                        x: {
-                            stacked: true,
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                afterTitle: tooltipUsersTotal,
-                            },
-                        },
-                    },
+                    plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
                 }} />
         </div>
 
@@ -325,33 +298,18 @@
                         y_cum: {
                             type: "linear",
                             position: "left",
-                            ticks: {
-                                callback: tickCompact,
-                            },
+                            ticks: { callback: tickCompact },
                         },
                         y_new: {
                             type: "linear",
                             position: "right",
-                            grid: {
-                                drawOnChartArea: false,
-                            },
-                            ticks: {
-                                callback: tickCompact,
-                            },
+                            grid: { drawOnChartArea: false },
+                            ticks: { callback: tickCompact },
                         },
-                        x: {
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        x: { type: "timeseries", min: timeSeriesMin },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true } },
                 }} />
         </div>
 
@@ -362,49 +320,49 @@
                 data={{
                     datasets: [
                         {
-                            type: BAR_CHART_TYPE,
+                            type: "bar",
                             label: "Registered users",
                             data: constructData(json["all"].users_registered_cum),
                             backgroundColor: COLORS.users_registered,
                             order: 10,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on any site`,
                             data: constructData(json["all"].users_cum),
                             borderColor: COLORS.site_all,
                             backgroundColor: COLORS.site_all,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on MeFi`,
                             data: constructData(padSeriesLeft("mefi", json["mefi"].users_cum)),
                             borderColor: COLORS.site_mefi,
                             backgroundColor: COLORS.site_mefi,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on AskMe`,
                             data: constructData(padSeriesLeft("askme", json["askme"].users_cum)),
                             borderColor: COLORS.site_askme,
                             backgroundColor: COLORS.site_askme,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on MeTa`,
                             data: constructData(padSeriesLeft("meta", json["meta"].users_cum)),
                             borderColor: COLORS.site_meta,
                             backgroundColor: COLORS.site_meta,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on Fanfare`,
                             data: constructData(padSeriesLeft("fanfare", json["fanfare"].users_cum)),
                             borderColor: COLORS.site_fanfare,
                             backgroundColor: COLORS.site_fanfare,
                         },
                         {
-                            type: LINE_CHART_TYPE,
+                            type: "line",
                             label: `Active on Music`,
                             data: constructData(padSeriesLeft("music", json["music"].users_cum)),
                             borderColor: COLORS.site_music,
@@ -414,24 +372,11 @@
                 }}
                 options={{
                     scales: {
-                        x: {
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
-                        y: {
-                            ticks: {
-                                callback: tickCompact,
-                            },
-                        },
+                        x: { type: "timeseries", min: timeSeriesMin },
+                        y: { ticks: { callback: tickCompact } },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true } },
                 }} />
         </div>
 
@@ -455,28 +400,12 @@
                         y: {
                             stacked: true,
                             max: 1,
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
-                        x: {
-                            stacked: true,
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true } },
                 }} />
         </div>
         <p class="note">User account age at time of posting or commenting.</p>
@@ -504,28 +433,13 @@
                                 },
                             },
                         },
-                        x: {
-                            stacked: true,
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: tooltipCumulative,
-                            },
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true }, tooltip: { callbacks: { label: tooltipCumulative } } },
                 }} />
         </div>
-        <p class="note">Percentage of posts made by the <i>n</i> per cent of users who made the most posts.</p>
+        <p class="note">Percentage of posts made by the <em>n</em> per cent of users who made the most posts.</p>
 
         <ChartTitle text="Comments by most active commenters" />
         <div class="chart-container">
@@ -542,36 +456,15 @@
                         y: {
                             stacked: true,
                             max: 0.7,
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
-                        x: {
-                            stacked: true,
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
+                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: tooltipCumulative,
-                            },
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true }, tooltip: { callbacks: { label: tooltipCumulative } } },
                 }} />
         </div>
-        <p class="note">Percentage of comments made by the <i>n</i> per cent of users who made the most comments.</p>
+        <p class="note">Percentage of comments made by the <em>n</em> per cent of users who made the most comments.</p>
 
         <h2>Posts and comments</h2>
 
@@ -590,19 +483,9 @@
                 options={{
                     scales: {
                         x: { type: "timeseries", min: timeSeriesMin },
-                        y: {
-                            ticks: {
-                                callback: tickCompact,
-                            },
-                        },
+                        y: { ticks: { callback: tickCompact } },
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                footer: tooltipPerDay,
-                            },
-                        },
-                    },
+                    plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
                 }} />
         </div>
         <ChartTitle text="Comments" />
@@ -615,19 +498,9 @@
                 options={{
                     scales: {
                         x: { type: "timeseries", min: timeSeriesMin },
-                        y: {
-                            ticks: {
-                                callback: tickCompact,
-                            },
-                        },
+                        y: { ticks: { callback: tickCompact } },
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                footer: tooltipPerDay,
-                            },
-                        },
-                    },
+                    plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
                 }} />
         </div>
 
@@ -649,13 +522,8 @@
                 }}
                 options={{
                     scales: {
-                        x: {
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
-                        y: {
-                            max: filterSite == "all" || filterSite == "mefi" ? 2 : undefined,
-                        },
+                        x: { type: "timeseries", min: timeSeriesMin },
+                        y: { max: filterSite == "all" || filterSite == "mefi" ? 2 : undefined },
                     },
                 }} />
         </div>
@@ -677,12 +545,7 @@
                     ],
                 }}
                 options={{
-                    scales: {
-                        x: {
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
-                    },
+                    scales: { x: { type: "timeseries", min: timeSeriesMin } },
                 }} />
         </div>
 
@@ -700,12 +563,7 @@
                     ],
                 }}
                 options={{
-                    scales: {
-                        x: {
-                            type: "timeseries",
-                            min: timeSeriesMin,
-                        },
-                    },
+                    scales: { x: { type: "timeseries", min: timeSeriesMin } },
                 }} />
         </div>
 
@@ -729,13 +587,7 @@
                     scales: {
                         x: { type: "timeseries", min: timeSeriesMin },
                         y: {
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
                     },
                     plugins: {
@@ -782,32 +634,15 @@
                     ],
                 }}
                 options={{
-                    datasets: {
-                        bar: {
-                            categoryPercentage: 0.9,
-                            barPercentage: 1,
-                        },
-                    },
+                    datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
                     scales: {
                         y: {
                             max: 0.2,
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true } },
                 }} />
         </div>
 
@@ -832,34 +667,18 @@
                 }}
                 options={{
                     datasets: {
-                        bar: {
-                            categoryPercentage: 0.9,
-                            barPercentage: 1,
-                        },
+                        bar: { categoryPercentage: 0.9, barPercentage: 1 },
                     },
                     scales: {
                         y: {
                             max: 0.07,
-                            ticks: {
-                                format: {
-                                    style: "percent",
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 1,
-                                },
-                            },
+                            ticks: { format: { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 } },
                         },
                     },
-                    interaction: {
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                        },
-                    },
+                    interaction: { mode: "index" },
+                    plugins: { legend: { display: true } },
                 }} />
         </div>
-        <p class="note">Timestamps are recorded on the MetaFilter server in Pacific Time.</p>
     </section>
 </div>
 
@@ -917,7 +736,7 @@
     }
 
     p.note {
-        @apply mx-2 before:mr-2 before:text-xs before:font-black before:uppercase before:text-mefi-blue before:content-["Note:"];
+        @apply before:mr-2 before:text-xs before:font-black before:uppercase before:text-mefi-blue before:content-["Note:"];
     }
 
     menu h2 {
