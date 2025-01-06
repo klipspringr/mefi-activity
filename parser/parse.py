@@ -6,7 +6,7 @@ from typing import Tuple
 
 import polars as pl
 from config import KEY_TIMESTAMP, SITES
-from polars import col
+from polars import Boolean, DataFrame, Enum, UInt8, UInt32, col, lit
 
 
 # we need to remove second fractions from timestamp as polars chokes on them
@@ -26,7 +26,7 @@ def extract_month(col_name):
 
 def load_dfs(
     infodump_dir,
-) -> Tuple[range, pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> Tuple[range, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
     with open(os.path.join(infodump_dir, "usernames.txt")) as f:
         infodump_date = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
 
@@ -36,7 +36,7 @@ def load_dfs(
             separator="\t",
             skip_rows=1,
             columns=[0, 1],
-            schema_overrides={"userid": pl.UInt32},
+            schema_overrides={"userid": UInt32},
         )
         .with_columns(date_parser("joindate"))
         .with_columns(
@@ -60,14 +60,14 @@ def load_dfs(
                 skip_rows=1,
                 columns=[1, 2, 3, 6],
                 schema_overrides={
-                    "userid": pl.UInt32,
-                    "category": pl.UInt8,
-                    "deleted": pl.UInt8,
+                    "userid": UInt32,
+                    "category": UInt8,
+                    "deleted": UInt8,
                 },
             )
             .with_columns(
                 date_parser("datestamp"),
-                site=pl.lit(site, pl.Enum(SITES)),
+                site=lit(site, Enum(SITES)),
             )
             .with_columns(month=extract_month("datestamp"))
             .filter(exclude_meta_askmes, exclude_latest_month)
@@ -83,14 +83,14 @@ def load_dfs(
                 skip_rows=1,
                 columns=[2, 3, 5],
                 schema_overrides={
-                    "userid": pl.UInt32,
-                    "best answer?": pl.UInt8,
+                    "userid": UInt32,
+                    "best answer?": UInt8,
                 },
             )
             .with_columns(
-                col("best answer?").cast(pl.Boolean),
+                col("best answer?").cast(Boolean),
                 date_parser("datestamp"),
-                site=pl.lit(site, pl.Enum(SITES)),
+                site=lit(site, Enum(SITES)),
             )
             .with_columns(month=extract_month("datestamp"))
             .filter(exclude_latest_month)
@@ -100,9 +100,7 @@ def load_dfs(
 
     df_activity_all = pl.concat(
         [
-            df.select(
-                pl.col("datestamp"), pl.col("month"), pl.col("site"), pl.col("userid")
-            )
+            df.select(col("datestamp"), col("month"), col("site"), col("userid"))
             for df in [df_posts_all, df_comments_all]
         ]
     ).sort("datestamp")
@@ -143,7 +141,7 @@ def load_dfs(
         )
     )
 
-    df_months_all = pl.DataFrame(
+    df_months_all = DataFrame(
         {
             "month": pl.date_range(
                 df_activity_all.head(1).get_column("month")[0],
@@ -182,22 +180,22 @@ def load_dfs(
     )
 
 
-def filter_by_site(site, df: pl.DataFrame) -> pl.DataFrame:
+def filter_by_site(site, df: DataFrame) -> DataFrame:
     return df.filter(col("site") == site) if site != "all" else df
 
 
 def get_site_dfs(
     site,
-    df_posts_all: pl.DataFrame,
-    df_comments_all: pl.DataFrame,
-    df_activity_all: pl.DataFrame,
-) -> Tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+    df_posts_all: DataFrame,
+    df_comments_all: DataFrame,
+    df_activity_all: DataFrame,
+) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
     df_posts = filter_by_site(site, df_posts_all)
     df_comments = filter_by_site(site, df_comments_all)
     df_activity = filter_by_site(site, df_activity_all)
 
     # range of months from min to max. this is better than group_by_dynamic(period="1mo") because it includes all months even if no data
-    df_months = pl.DataFrame(
+    df_months = DataFrame(
         {
             "month": pl.date_range(
                 df_activity.head(1).get_column("month")[0],
