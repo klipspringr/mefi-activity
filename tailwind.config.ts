@@ -11,10 +11,6 @@ export default {
                 "mefi-dark": "rgb(3, 67, 109)",
                 "mefi-pale": "rgb(136, 194, 216)",
                 "mefi-paler": "rgb(174, 214, 229)",
-                // askme: "rgb(66, 103, 70)",
-                // meta: "rgb(89, 89, 89)",
-                // fanfare: "rgb(62, 51, 84)",
-                // music: "rgb(51, 51, 51)",
             },
             fontFamily: {
                 sans: ["Reddit Sans", ...defaultTheme.fontFamily.sans],

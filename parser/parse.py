@@ -1,7 +1,6 @@
 import json
 import os
 from datetime import date, datetime
-from pathlib import Path
 from typing import Tuple
 
 import polars as pl
@@ -26,7 +25,7 @@ def extract_month(col_name):
 
 def load_dfs(
     infodump_dir,
-) -> Tuple[range, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
+) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
     with open(os.path.join(infodump_dir, "usernames.txt")) as f:
         infodump_date = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
 
@@ -153,7 +152,7 @@ def load_dfs(
     )
 
     # get registered users for whole site
-    df_users_registered_cum = (
+    df_users_registered = (
         df_months_all.join(
             df_users.select("userid", "joinmonth"),
             left_on="month",
@@ -162,18 +161,21 @@ def load_dfs(
             coalesce=True,
         )
         .group_by("month")
-        .agg(col("userid").count().alias("count"))
-        .select(col("count").cum_sum())
+        .agg(col("userid").count())
+        .select(col("userid").cum_sum().alias("sum"))
     )
 
-    range_joinyears = range(
-        df_users.get_column("joinyear").min(), df_users.get_column("joinyear").max() + 1
+    joinyears = list(
+        range(
+            df_users.get_column("joinyear").min(),
+            df_users.get_column("joinyear").max() + 1,
+        )
     )
 
     return (
-        range_joinyears,
+        joinyears,
         df_users,
-        df_users_registered_cum,
+        df_users_registered,
         df_posts_all,
         df_comments_all,
         df_activity_all,
@@ -211,9 +213,9 @@ def get_site_dfs(
 
 def parse(infodump_dir, output_path, publication_timestamp=None):
     (
-        range_joinyears,
+        joinyears,
         df_users,
-        df_users_registered_cum,
+        df_users_registered,
         df_posts_all,
         df_comments_all,
         df_activity_all,
@@ -221,6 +223,7 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
 
     out = {
         KEY_TIMESTAMP: publication_timestamp,
+        "_start_joinyear": joinyears[0],
     }
 
     for site in SITES + ["all"]:
@@ -237,8 +240,8 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
         }
 
         if site == "all":
-            out[site]["users_registered_cum"] = df_users_registered_cum.get_column(
-                "count"
+            out[site]["users_registered"] = df_users_registered.get_column(
+                "sum"
             ).to_list()
 
         df_users_monthly = (
@@ -274,15 +277,15 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
             .agg(
                 (
                     col("joinyear").filter(joinyear=year).count().alias(str(year))
-                    for year in range_joinyears
+                    for year in joinyears
                 ),
             )
             .drop("month")
         )
 
-        out[site]["users_monthly_by_joined"] = df_users_monthly_by_joined.to_dict(
-            as_series=False
-        )
+        out[site]["users_monthly_by_joined"] = [
+            c.to_list() for c in df_users_monthly_by_joined.get_columns()
+        ]
 
         df_activity_by_age = (
             df_months.join(
@@ -392,18 +395,12 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                     ).alias(str(n))
                     for n in TOP_N
                 )
-                .with_columns(
-                    (col(str(TOP_N[i])) - col(str(TOP_N[i - 1])))
-                    for i in range(1, len(TOP_N))
-                )
                 .select(pl.all().round(3))
             )
 
             out[site][f"{label}_top_users"] = [
                 c.to_list() for c in df_activity_by_top_users.get_columns()
             ]
-
-    Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w") as w:
         json.dump(out, w, sort_keys=True, indent=4)
