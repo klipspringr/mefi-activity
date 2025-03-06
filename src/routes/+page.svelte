@@ -2,6 +2,21 @@
     import { browser } from "$app/environment"
     import ChartTitle from "$lib/ChartTitle.svelte"
     import {
+        ACTIVITY_LEVELS,
+        AGE_LABELS,
+        COLORS,
+        COMPACT_FORMAT,
+        HOUR_FORMAT,
+        NUMBER_FORMAT,
+        PERCENT_OPTIONS,
+        PERIODS,
+        SITES,
+        SITES_KEYS,
+        TOP_N,
+        type TPeriod,
+        type TSite,
+    } from "$lib/common"
+    import {
         BarController,
         BarElement,
         CategoryScale,
@@ -21,6 +36,7 @@
     } from "chart.js"
     import "chartjs-adapter-date-fns"
     import { Chart } from "svelte-chartjs"
+    import { queryParameters } from "sveltekit-search-params"
     import "../app.css"
     import * as json from "../data/data.json"
 
@@ -37,77 +53,6 @@
         TimeSeriesScale,
         Tooltip
     )
-
-    const SITES = {
-        all: "All sites",
-        mefi: "MetaFilter",
-        askme: "Ask MetaFilter",
-        meta: "MetaTalk",
-        fanfare: "FanFare",
-        music: "Music",
-    } as const
-    const SITES_KEYS = Object.keys(SITES) as Array<keyof typeof SITES>
-
-    const MONTH_LATEST = json["all"]._start_month - 1 + json["all"].posts.length
-    const TIMESERIES_FILTERS = {
-        "All time": undefined,
-        "Since 2010": new Date(2010, 0, 1).getTime(),
-        "Since 2020": new Date(2020, 0, 1).getTime(),
-        "Last 10 years": new Date(json["all"]._start_year, MONTH_LATEST - 120, 1).getTime(),
-        "Last 5 years": new Date(json["all"]._start_year, MONTH_LATEST - 60, 1).getTime(),
-        "Last 2 years": new Date(json["all"]._start_year, MONTH_LATEST - 24, 1).getTime(),
-    } as const
-
-    // need to keep these consistent with config.py
-    const ACTIVITY_LEVELS = [1, 5, 10, 25, 50]
-    const AGE_LABELS = ["<1 year", "1-5 years", "5-10 years", "10-15 years", "15+ years"]
-    const TOP_N = [0.01, 0.05, 0.1]
-
-    const COLORS = {
-        white: "rgb(255, 255, 255)",
-        posts: "rgb(153, 102, 255)",
-        comments: "rgb(75, 192, 192)",
-        deleted: "rgb(255, 99, 132)",
-        users_new: "rgb(75, 192, 192)",
-        users_registered: "rgb(174, 214, 229)",
-        sites: {
-            all: "rgb(51, 65, 85)",
-            mefi: "rgb(54, 162, 235)",
-            askme: "rgb(75, 192, 192)",
-            meta: "rgb(255, 159, 64)",
-            fanfare: "rgb(153, 102, 255)",
-            music: "rgb(255, 99, 132)",
-        },
-        sequence: [
-            "rgb(54, 162, 235)",
-            "rgb(255, 205, 86)",
-            "rgb(255, 159, 64)",
-            "rgb(255, 99, 132)",
-            "rgb(153, 102, 255)",
-            "rgb(75, 192, 192)",
-            "rgb(201, 203, 207)",
-        ],
-    }
-
-    const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
-
-    const NUMBER_FORMAT = Intl.NumberFormat(undefined, { useGrouping: true })
-    const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
-    const HOUR_FORMAT = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
-
-    const PERCENT_OPTIONS = {
-        style: "percent",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 1,
-    } as Intl.NumberFormatOptions
-
-    const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
-    const BAR_CHART_TYPE = "bar" as ChartType
-
-    let showJumpMenu = false
-
-    let filterSite: keyof typeof SITES = "all"
-    let timeSeriesMin: number | undefined
 
     ChartJS.defaults.animation = false
     ChartJS.defaults.responsive = true
@@ -136,6 +81,9 @@
     Tooltip.positioners.cursor = (_: ActiveElement[], eventPos: Point) => eventPos
     ChartJS.defaults.plugins.tooltip.position = "cursor"
 
+    const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
+    const BAR_CHART_TYPE = "bar" as ChartType
+
     const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
     const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
@@ -155,15 +103,62 @@
             .fill(value)
             .concat(series)
 
+    const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
+
     // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
     const askMePostsPadded = padSeriesLeft("askme", json["askme"].posts, 0)
     const totalPostsExAskMe = json["all"].posts.map((n, i) => n - askMePostsPadded[i])
 
-    $: monthlyLabels = json[filterSite].posts.map((_, i) =>
-        new Date(json[filterSite]._start_year, json[filterSite]._start_month + i - 1, 1).getTime()
+    // UI parameters
+    let showJumpMenu = false
+
+    const params = queryParameters(
+        {
+            site: {
+                decode: (v): TSite => (v !== null && v in SITES ? (v as TSite) : "all"),
+                encode: (v) => String(v),
+                defaultValue: "all" as TSite,
+            },
+            time: {
+                decode: (v): TPeriod => (v !== null && v in PERIODS ? (v as TPeriod) : "all"),
+                encode: (v) => String(v),
+                defaultValue: "all" as TPeriod,
+            },
+        },
+        { showDefaults: false }
     )
 
-    $: activeUsers = json[filterSite].users_monthly[0]
+    let timeSeriesMin = 0 // filter chart x-axis by time period (unix timestamp ms)
+    const START_YEAR = json["all"]._start_year
+    const LATEST_MONTH = json["all"]._start_month - 1 + json["all"].posts.length
+
+    $: {
+        switch ($params.time) {
+            case "since2010":
+                timeSeriesMin = new Date(2010, 0, 1).getTime()
+                break
+            case "since2020":
+                timeSeriesMin = new Date(2020, 0, 1).getTime()
+                break
+            case "last10y":
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 10 * 12, 1).getTime()
+                break
+            case "last5y":
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 5 * 12, 1).getTime()
+                break
+            case "last2y":
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 2 * 12, 1).getTime()
+                break
+            default:
+                timeSeriesMin = 0
+        }
+    }
+
+    $: monthlyLabels = json[$params.site].posts.map((_, i) =>
+        new Date(json[$params.site]._start_year, json[$params.site]._start_month + i - 1, 1).getTime()
+    )
+
+    $: activeUsers = json[$params.site].users_monthly[0]
 </script>
 
 <svelte:head>
@@ -190,13 +185,13 @@
         </div>
         <div class="flex h-12 items-center gap-2 bg-mefi-dark px-4">
             <div class="text-sm font-semibold uppercase tracking-wider text-mefi-paler xs:text-base">Filter</div>
-            <select bind:value={filterSite} id="filterSite">
-                {#each Object.entries(SITES) as [key, name]}
-                    <option value={key}>{name}</option>
+            <select id="filterSite" bind:value={$params.site}>
+                {#each Object.entries(SITES) as [value, label]}
+                    <option {value}>{label}</option>
                 {/each}
             </select>
-            <select bind:value={timeSeriesMin} id="timeSeriesMin">
-                {#each Object.entries(TIMESERIES_FILTERS) as [label, value]}
+            <select id="timeSeriesMin" bind:value={$params.time}>
+                {#each Object.entries(PERIODS) as [value, label]}
                     <option {value}>{label}</option>
                 {/each}
             </select>
@@ -229,7 +224,7 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].users_monthly_by_joined.map((counts, i) => ({
+                    datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
                         label: "Joined " + (json._start_joinyear + i),
                         data: constructData(counts),
                         backgroundColor: color(i),
@@ -250,7 +245,7 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].users_monthly_by_joined.map((counts, i) => ({
+                    datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
                         label: "Joined " + (json._start_joinyear + i),
                         data: constructData(counts, (v, j) => v / activeUsers[j]),
                         backgroundColor: color(i),
@@ -271,7 +266,7 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].users_monthly.map((counts, level) => ({
+                    datasets: json[$params.site].users_monthly.map((counts, level) => ({
                         label: `${ACTIVITY_LEVELS[level]}+`,
                         data: constructData(counts),
                         backgroundColor: color(level),
@@ -298,7 +293,7 @@
                         {
                             type: "bar",
                             label: "Users first active (R axis)",
-                            data: constructData(json[filterSite].users_new),
+                            data: constructData(json[$params.site].users_new),
                             backgroundColor: COLORS.users_new,
                             yAxisID: "y_new",
                             order: 1,
@@ -306,7 +301,7 @@
                         {
                             type: "line",
                             label: "Users ever active (L axis)",
-                            data: constructData(json[filterSite].users_cum),
+                            data: constructData(json[$params.site].users_cum),
                             borderColor: COLORS.sites.all,
                             backgroundColor: COLORS.white,
                             yAxisID: "y_cum",
@@ -376,11 +371,11 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].activity_by_age.map((counts, i) => ({
+                    datasets: json[$params.site].activity_by_age.map((counts, i) => ({
                         label: AGE_LABELS[i],
                         data: constructData(
                             counts,
-                            (c, j) => c / (json[filterSite].posts[j] + json[filterSite].comments[j])
+                            (c, j) => c / (json[$params.site].posts[j] + json[$params.site].comments[j])
                         ),
                         backgroundColor: color(i),
                     })),
@@ -402,7 +397,7 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].posts_top_users.map((counts, i) => ({
+                    datasets: json[$params.site].posts_top_users.map((counts, i) => ({
                         label: `Top ${TOP_N[i] * 100}%`,
                         data: constructData(counts),
                         backgroundColor: color(i),
@@ -425,7 +420,7 @@
             <Chart
                 type="bar"
                 data={{
-                    datasets: json[filterSite].comments_top_users.map((counts, i) => ({
+                    datasets: json[$params.site].comments_top_users.map((counts, i) => ({
                         label: `Top ${TOP_N[i] * 100}%`,
                         data: constructData(counts),
                         backgroundColor: color(i),
@@ -455,7 +450,7 @@
                     datasets: [
                         {
                             label: "Posts",
-                            data: constructData(json[filterSite].posts),
+                            data: constructData(json[$params.site].posts),
                             backgroundColor: COLORS.posts,
                         },
                     ],
@@ -478,7 +473,7 @@
                     datasets: [
                         {
                             label: "Comments",
-                            data: constructData(json[filterSite].comments),
+                            data: constructData(json[$params.site].comments),
                             backgroundColor: COLORS.comments,
                         },
                     ],
@@ -501,13 +496,13 @@
                     datasets: [
                         {
                             label: "Posts per active user",
-                            data: constructData(json[filterSite].posts, (v, i) => v / activeUsers[i]),
+                            data: constructData(json[$params.site].posts, (v, i) => v / activeUsers[i]),
                             borderColor: COLORS.posts,
                         },
                     ],
                 }}
                 options={{
-                    scales: { x: { type: "timeseries", min: timeSeriesMin ?? new Date(2001, 0, 1).getTime() } },
+                    scales: { x: { type: "timeseries", min: Math.max(timeSeriesMin, new Date(2001, 0, 1).getTime()) } },
                 }} />
         </div>
         <div class="note">
@@ -523,7 +518,7 @@
                     datasets: [
                         {
                             label: "Comments per active user",
-                            data: constructData(json[filterSite].comments, (v, i) => v / activeUsers[i]),
+                            data: constructData(json[$params.site].comments, (v, i) => v / activeUsers[i]),
                             borderColor: COLORS.comments,
                         },
                     ],
@@ -542,7 +537,7 @@
                     datasets: [
                         {
                             label: "Comments per post",
-                            data: constructData(json[filterSite].comments, (v, i) => v / json[filterSite].posts[i]),
+                            data: constructData(json[$params.site].comments, (v, i) => v / json[$params.site].posts[i]),
                             borderColor: COLORS.comments,
                         },
                     ],
@@ -562,8 +557,8 @@
                         {
                             label: "Percentage of posts deleted",
                             data: constructData(
-                                json[filterSite].posts_deleted,
-                                (v, i) => v / (filterSite === "all" ? totalPostsExAskMe : json[filterSite].posts)[i]
+                                json[$params.site].posts_deleted,
+                                (v, i) => v / ($params.site === "all" ? totalPostsExAskMe : json[$params.site].posts)[i]
                             ),
                             backgroundColor: COLORS.deleted,
                         },
@@ -578,10 +573,10 @@
                         tooltip: {
                             callbacks: {
                                 afterTitle: ([{ dataIndex }]) => [
-                                    "Deleted: " + NUMBER_FORMAT.format(json[filterSite].posts_deleted[dataIndex]),
-                                    filterSite === "all"
+                                    "Deleted: " + NUMBER_FORMAT.format(json[$params.site].posts_deleted[dataIndex]),
+                                    $params.site === "all"
                                         ? "Total (ex AskMe): " + NUMBER_FORMAT.format(totalPostsExAskMe[dataIndex])
-                                        : "Total: " + NUMBER_FORMAT.format(json[filterSite].posts[dataIndex]),
+                                        : "Total: " + NUMBER_FORMAT.format(json[$params.site].posts[dataIndex]),
                                 ],
                             },
                         },
@@ -602,12 +597,12 @@
                     datasets: [
                         {
                             label: "Posts",
-                            data: constructData(json[filterSite].posts_weekdays_percent, undefined, true),
+                            data: constructData(json[$params.site].posts_weekdays_percent, undefined, true),
                             backgroundColor: COLORS.posts,
                         },
                         {
                             label: "Comments",
-                            data: constructData(json[filterSite].comments_weekdays_percent, undefined, true),
+                            data: constructData(json[$params.site].comments_weekdays_percent, undefined, true),
                             backgroundColor: COLORS.comments,
                         },
                     ],
@@ -630,12 +625,12 @@
                     datasets: [
                         {
                             label: "Posts",
-                            data: constructData(json[filterSite].posts_hours_percent, undefined, true),
+                            data: constructData(json[$params.site].posts_hours_percent, undefined, true),
                             backgroundColor: COLORS.posts,
                         },
                         {
                             label: "Comments",
-                            data: constructData(json[filterSite].comments_hours_percent, undefined, true),
+                            data: constructData(json[$params.site].comments_hours_percent, undefined, true),
                             backgroundColor: COLORS.comments,
                         },
                     ],
@@ -717,7 +712,7 @@
 
     header select,
     header select > option {
-        @apply rounded-full bg-mefi-blue py-1 pl-2 pr-4 text-sm font-semibold text-white xs:text-base;
+        @apply rounded-full bg-mefi-blue py-1 pl-2 pr-4 text-sm font-semibold text-white focus:outline-none xs:text-base;
     }
 
     header select:has(option:not(:first-child):checked) {
