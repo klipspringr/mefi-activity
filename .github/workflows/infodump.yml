@@ -37,8 +37,8 @@ jobs:
 
             - name: Check for Infodump updates
               env:
-                  USER_AGENT: ${{ secrets.USER_AGENT }}
-              run: python parser/download.py "$USER_AGENT" infodump src/data/data.json
+                  INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
+              run: python parser/download.py infodump src/data/data.json
 
             - name: Push any update
               run: |

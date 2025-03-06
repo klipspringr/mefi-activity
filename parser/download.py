@@ -29,7 +29,7 @@ def download_file(user_agent, filename, infodump_dir):
             zip.extract(filename + ".txt", infodump_dir)
 
 
-def download_infodump(dev, user_agent, infodump_dir, output_path):
+def download_infodump(dev, infodump_dir, output_path, user_agent):
     publication_timestamp = get_publication_timestamp()
 
     download_required = True
@@ -49,7 +49,7 @@ def download_infodump(dev, user_agent, infodump_dir, output_path):
     # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
     infodump_path = Path(infodump_dir)
     if download_required or (dev and not (infodump_path / "usernames.txt").exists()):
-        print("Download Infodump")
+        print("Download Infodump with user agent {user_agent}")
 
         if infodump_path.exists():
             print(f'Delete "{infodump_dir}/*.txt"')
@@ -71,8 +71,12 @@ def download_infodump(dev, user_agent, infodump_dir, output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dev", action="store_true")
-    parser.add_argument("user_agent")
     parser.add_argument("infodump_dir")
     parser.add_argument("output_path")
     args = parser.parse_args()
-    download_infodump(args.dev, args.user_agent, args.infodump_dir, args.output_path)
+
+    user_agent = os.environ.get("INFODUMP_USER_AGENT")
+    if not user_agent:
+        raise ValueError("INFODUMP_USER_AGENT not set")
+
+    download_infodump(args.dev, args.infodump_dir, args.output_path, user_agent)

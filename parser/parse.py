@@ -5,7 +5,7 @@ from typing import Tuple
 
 import polars as pl
 from config import ACTIVITY_LEVELS, AGE_THRESHOLDS, KEY_TIMESTAMP, SITES, TOP_N
-from polars import Boolean, DataFrame, Enum, UInt8, UInt32, col, lit
+from polars import DataFrame, Enum, UInt8, UInt32, col, lit
 
 
 # we need to remove second fractions from timestamp as polars chokes on them
@@ -34,12 +34,12 @@ def load_dfs(
             source=os.path.join(infodump_dir, "usernames.txt"),
             separator="\t",
             skip_rows=1,
-            columns=[0, 1],
             schema_overrides={"userid": UInt32},
         )
         .with_columns(date_parser("joindate"))
         .with_columns(
-            joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
+            joinyear=extract_year("joindate"),
+            joinmonth=extract_month("joindate"),
         )
     )
 
@@ -57,7 +57,6 @@ def load_dfs(
                 source=os.path.join(infodump_dir, f"postdata_{site}.txt"),
                 separator="\t",
                 skip_rows=1,
-                columns=[1, 2, 3, 6],
                 schema_overrides={
                     "userid": UInt32,
                     "category": UInt8,
@@ -80,14 +79,11 @@ def load_dfs(
                 source=os.path.join(infodump_dir, f"commentdata_{site}.txt"),
                 separator="\t",
                 skip_rows=1,
-                columns=[2, 3, 5],
                 schema_overrides={
                     "userid": UInt32,
-                    "best answer?": UInt8,
                 },
             )
             .with_columns(
-                col("best answer?").cast(Boolean),
                 date_parser("datestamp"),
                 site=lit(site, Enum(SITES)),
             )
@@ -118,7 +114,7 @@ def load_dfs(
         .with_columns(
             joindate=pl.when(col("joindate") > col("datestamp"))
             .then(col("datestamp"))
-            .otherwise(col("joindate"))
+            .otherwise(col("joindate")),
         )
         .with_columns(
             joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
@@ -127,7 +123,7 @@ def load_dfs(
     )
 
     # a small number of users made posts/comments but are not in df_users. create records for them, using date of first post/comment as joindate
-    df_users.extend(
+    df_users_missing = (
         df_activity_all.select("userid", "datestamp")
         .join(df_users, on="userid", how="anti")
         .sort("datestamp")
@@ -135,10 +131,14 @@ def load_dfs(
         .select(
             col("userid"),
             joindate=col("datestamp"),
+            name=None,
             joinyear=extract_year("datestamp"),
             joinmonth=extract_month("datestamp"),
         )
     )
+
+    # add missing users to df_users
+    df_users.extend(df_users_missing)
 
     df_months_all = DataFrame(
         {

@@ -13,7 +13,7 @@ To remind myself how it works in future:
 - if a new Infodump is available, download postdata, commentdata, and usernames to `infodump/`, and parse into `src/data/data.json`
 - push json to repo
 - a Personal Access Token must be stored in the `INFODUMP_ACCESS_TOKEN` repo secret, so pushes trigger a deployment
-- `USER_AGENT` repo secret is also required
+- `INFODUMP_USER_AGENT` repo secret is also required
 
 ## Static frontend
 
@@ -21,10 +21,10 @@ To remind myself how it works in future:
 
 ## Local development
 
-- create a venv and `pip install -r parser/requirements.txt`
-- run `python parser/download.py -d YOUR_USER_AGENT infodump src/data/data.json`
-- with the `-d|--dev` flag, we (a) download Infodump data on first run (but not subsequently, unless a new Infodump is published), and (b) always regenerate the json
-- `YOUR_USER_AGENT` is sent as the User-Agent header when downloading large Infodump files, and should be set to a string that identifies you
+- create a venv, run `pip install -r parser/requirements.txt`, activate venv
+- set `INFODUMP_USER_AGENT` environment variable to a string that identifies you (this is sent when downloading large Infodump files)
+- run `python parser/download.py --dev infodump src/data/data.json`
+- with `-d|--dev`, we always regenerate the json, even if there is no new Infodump
 
 ## Notebook
 
