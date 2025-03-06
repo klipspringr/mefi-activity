@@ -36,6 +36,7 @@
     } from "chart.js"
     import "chartjs-adapter-date-fns"
     import { Chart } from "svelte-chartjs"
+    import { fade } from "svelte/transition"
     import { queryParameters } from "sveltekit-search-params"
     import "../app.css"
     import * as json from "../data/data.json"
@@ -104,6 +105,8 @@
             .concat(series)
 
     const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
+
+    const hideJumpMenu = () => (showJumpMenu = false)
 
     // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
     const askMePostsPadded = padSeriesLeft("askme", json["askme"].posts, 0)
@@ -207,8 +210,8 @@
         <li>
             Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a>
             or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
-            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not affiliated with MetaFilter
-            LLC.
+            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>.
+            <strong>Not affiliated with MetaFilter.com</strong>.
         </li>
         <li>
             <strong>Active users</strong> means users who made <strong>at least one comment or post</strong> on the
@@ -652,12 +655,17 @@
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <menu
-    class="fixed right-0 top-0 z-50 h-screen max-w-[85vw] overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
+    class="fixed right-0 top-0 z-50 h-screen max-w-[90vw] overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
     class:translate-x-0={showJumpMenu}
     class:translate-x-full={!showJumpMenu}
     class:border-l-4={showJumpMenu}>
     <ul class="space-y-1">
-        <li><a href="#top" on:click={() => (showJumpMenu = false)}>Top</a></li>
+        <li class="flex items-center justify-between">
+            <a href="#top" on:click={hideJumpMenu}>Top</a>
+            <button
+                class="bg-mefi-paler px-3 py-1 text-3xl/none font-bold text-mefi-blue no-underline hover:text-mefi-dark"
+                on:click={hideJumpMenu}>&times;</button>
+        </li>
         {#if browser}
             {#each document.querySelectorAll("h2:not(.menu-ignore), h3") as h}
                 {#if h.tagName === "H2"}
@@ -666,7 +674,7 @@
                     </li>
                 {:else}
                     <li>
-                        <a href="#{h.id}" on:click={() => (showJumpMenu = false)}>{h.childNodes[0].textContent}</a>
+                        <a href="#{h.id}" on:click={hideJumpMenu}>{h.childNodes[0].textContent}</a>
                     </li>
                 {/if}
             {/each}
@@ -677,7 +685,10 @@
 {#if showJumpMenu}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="fixed left-0 top-0 z-40 h-screen w-screen bg-mefi-blue/90" on:click={() => (showJumpMenu = false)}>
+    <div
+        class="fixed left-0 top-0 z-40 h-screen w-screen bg-mefi-blue/90"
+        transition:fade={{ duration: 200 }}
+        on:click={hideJumpMenu}>
     </div>
 {/if}
 
