@@ -29,19 +29,12 @@ def load_dfs(
     with open(os.path.join(infodump_dir, "usernames.txt")) as f:
         infodump_date = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
 
-    df_users = (
-        pl.read_csv(
-            source=os.path.join(infodump_dir, "usernames.txt"),
-            separator="\t",
-            skip_rows=1,
-            schema_overrides={"userid": UInt32},
-        )
-        .with_columns(date_parser("joindate"))
-        .with_columns(
-            joinyear=extract_year("joindate"),
-            joinmonth=extract_month("joindate"),
-        )
-    )
+    df_users = pl.read_csv(
+        source=os.path.join(infodump_dir, "usernames.txt"),
+        separator="\t",
+        skip_rows=1,
+        schema_overrides={"userid": UInt32},
+    ).with_columns(date_parser("joindate"))
 
     exclude_meta_askmes = (
         ~((col("site") == "meta") & (col("category") == 10)),
@@ -116,14 +109,11 @@ def load_dfs(
             .then(col("datestamp"))
             .otherwise(col("joindate")),
         )
-        .with_columns(
-            joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
-        )
         .drop("datestamp")
     )
 
     # a small number of users made posts/comments but are not in df_users. create records for them, using date of first post/comment as joindate
-    df_users_missing = (
+    df_users.extend(
         df_activity_all.select("userid", "datestamp")
         .join(df_users, on="userid", how="anti")
         .sort("datestamp")
@@ -132,13 +122,13 @@ def load_dfs(
             col("userid"),
             joindate=col("datestamp"),
             name=None,
-            joinyear=extract_year("datestamp"),
-            joinmonth=extract_month("datestamp"),
         )
     )
 
-    # add missing users to df_users
-    df_users.extend(df_users_missing)
+    # extract join year and month
+    df_users = df_users.with_columns(
+        joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
+    )
 
     df_months_all = DataFrame(
         {

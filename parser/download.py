@@ -30,9 +30,8 @@ def download_file(user_agent, filename, infodump_dir):
 
 
 def download_infodump(dev, infodump_dir, output_path, user_agent):
-    publication_timestamp = get_publication_timestamp()
-
     download_required = True
+    publication_timestamp = get_publication_timestamp()
 
     if os.path.exists(output_path):
         with open(output_path, "r") as f:
@@ -49,7 +48,7 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
     # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
     infodump_path = Path(infodump_dir)
     if download_required or (dev and not (infodump_path / "usernames.txt").exists()):
-        print("Download Infodump with user agent {user_agent}")
+        print("Download Infodump")
 
         if infodump_path.exists():
             print(f'Delete "{infodump_dir}/*.txt"')

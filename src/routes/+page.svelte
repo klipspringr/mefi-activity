@@ -85,13 +85,19 @@
     const LINE_CHART_TYPE = "line" as ChartType // stop TypeScript complaining
     const BAR_CHART_TYPE = "bar" as ChartType
 
+    // zeroth day of next month = last day of this month
+    const daysInMonth = (timestamp: number) => {
+        const d = new Date(timestamp)
+        return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    }
+
     const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
     const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
         "Total monthly active: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
 
     const tooltipPerDay = (ctx: TooltipItem<"bar">[]) =>
-        "Per day: " + NUMBER_FORMAT.format(Math.round(ctx[0].parsed.y / (365 / 12)))
+        "Per day: " + NUMBER_FORMAT.format(Math.round(ctx[0].parsed.y / daysInMonth(ctx[0].parsed.x)))
 
     const constructData = (series: number[], mapFn?: (v: number, i: number) => number, categoryLabels = false) =>
         series.map((v, i) => ({
@@ -361,9 +367,9 @@
                 }} />
         </div>
         <div class="note">
-            Lines show users who made at least one post or comment on a given site. Registered users are higher,
-            reflecting users who never post or comment. User ID numbers are higher still, because the site allocates an
-            ID before signup is completed.
+            <strong>Registered users</strong> (shaded area) completed the signup process.
+            <strong>Active users</strong> (lines) made at least one post or comment on a given site.
+            <strong>Users' ID numbers</strong> are much higher, because the site allocates an ID before signup is completed.
         </div>
     </div>
 
