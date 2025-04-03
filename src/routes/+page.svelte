@@ -175,6 +175,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link href="https://fonts.googleapis.com/css2?family=Reddit+Sans:wght@200..900&display=swap" rel="stylesheet" />
+    <link rel="canonical" href="https://mefist.at/" />
 </svelte:head>
 
 <div class="mx-auto max-w-[1280px] xl:border-x xl:border-mefi-paler">
