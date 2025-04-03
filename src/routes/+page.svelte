@@ -212,18 +212,19 @@
     <ul class="mb-4 ml-4 list-outside list-disc px-2 marker:text-mefi-blue sm:px-4">
         <li>
             Data is from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published on
-            <strong>{json._published}</strong>. Infodump updates show here within 24 hours.
-        </li>
-        <li>
-            Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail me</a>
-            or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
-            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>.
-            <strong>Not affiliated with MetaFilter.com</strong>.
+            <strong>{json._published}</strong>. Charts run to the last completed month in the latest Infodump. Infodump
+            updates show here within 24 hours.
         </li>
         <li>
             <strong>Active users</strong> means users who made <strong>at least one comment or post</strong> on the
             selected site in the given month. For different definitions of activity, see
             <a href="#monthly_users_by_number_of_posts_and_comments">this chart</a>.
+        </li>
+        <li>
+            Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
+            or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
+            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>.
+            <strong>Not affiliated with MetaFilter.com</strong>.
         </li>
     </ul>
 
