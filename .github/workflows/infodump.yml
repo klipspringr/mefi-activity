@@ -6,7 +6,7 @@ on:
 
     # Run on daily schedule, UTC
     schedule:
-        - cron: "30 12 * * *"
+        - cron: "50 12 * * *"
 
 permissions:
     contents: write
