@@ -7,6 +7,7 @@
         COLORS,
         COMPACT_FORMAT,
         HOUR_FORMAT,
+        MONTH_FORMAT,
         NUMBER_FORMAT,
         PERCENT_OPTIONS,
         PERIODS,
@@ -139,7 +140,7 @@
 
     let timeSeriesMin = 0 // filter chart x-axis by time period (unix timestamp ms)
     const START_YEAR = json["all"]._start_year
-    const LATEST_MONTH = json["all"]._start_month - 1 + json["all"].posts.length
+    const LATEST_MONTH = json["all"]._start_month - 1 + json["all"].posts.length - 1
 
     $: {
         switch ($params.time) {
@@ -150,13 +151,13 @@
                 timeSeriesMin = new Date(2020, 0, 1).getTime()
                 break
             case "last10y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 10 * 12, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 10 * 12 + 1, 1).getTime()
                 break
             case "last5y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 5 * 12, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 5 * 12 + 1, 1).getTime()
                 break
             case "last2y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 2 * 12, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 2 * 12 + 1, 1).getTime()
                 break
             default:
                 timeSeriesMin = 0
@@ -212,8 +213,11 @@
     <ul class="mb-4 ml-4 list-outside list-disc px-2 marker:text-mefi-blue sm:px-4">
         <li>
             Data is from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published on
-            <strong>{json._published}</strong>. Charts run to the last completed month in the latest Infodump. Infodump
-            updates show here within 24 hours.
+            <strong>{json._published}</strong>. Infodump updates show here within 24 hours.
+        </li>
+        <li>
+            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH, 1))}</strong>, which is the
+            last completed month in the Infodump.
         </li>
         <li>
             <strong>Active users</strong> means users who made <strong>at least one comment or post</strong> on the

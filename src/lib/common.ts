@@ -53,6 +53,7 @@ export const COLORS = {
 export const NUMBER_FORMAT = Intl.NumberFormat(undefined, { useGrouping: true })
 export const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
 export const HOUR_FORMAT = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
+export const MONTH_FORMAT = Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" })
 
 export const PERCENT_OPTIONS = {
     style: "percent",
