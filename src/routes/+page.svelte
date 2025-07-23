@@ -231,7 +231,10 @@
             <strong>Not affiliated with MetaFilter.com</strong>.
         </li>
     </ul>
-
+    <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
+        <strong>July 2025 notice:</strong> the Infodump hasn't contained new data since 29 June &mdash; hopefully it's fixed soon!
+        🤞
+    </div>
     <h2>Users</h2>
     <div class="chart">
         <ChartTitle text="Monthly active users" />
