@@ -59,7 +59,7 @@ pandocfilters==1.5.1
 parso==0.8.4
 pexpect==4.9.0
 platformdirs==4.3.6
-polars==1.24.0
+polars==1.32.3
 prometheus_client==0.21.1
 prompt_toolkit==3.0.50
 psutil==7.0.0
