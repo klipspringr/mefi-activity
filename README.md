@@ -22,7 +22,7 @@ To remind myself how it works in future:
 ## Local development
 
 - create a venv, run `pip install -r parser/requirements.txt`, activate venv
-- set `INFODUMP_USER_AGENT` environment variable to a string that identifies you (this is sent when downloading large Infodump files)
+- optionally, set `INFODUMP_USER_AGENT` environment variable to a string that identifies you (this is sent when downloading large Infodump files)
 - run `python parser/download.py --dev infodump src/data/data.json`
 - with `-d|--dev`, we always regenerate the json, even if there is no new Infodump
 

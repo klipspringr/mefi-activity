@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import date, datetime
+import pathlib
 from typing import Tuple
 
 import polars as pl
@@ -26,8 +27,16 @@ def extract_month(col_name):
 def load_dfs(
     infodump_dir,
 ) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
-    with open(os.path.join(infodump_dir, "usernames.txt")) as f:
-        infodump_date = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
+    # sometimes the infodump contains text files were exported at different times
+    # set infodump_date to the earliest timestamp
+    txt_file_timestamps = []
+
+    for txt_file in pathlib.Path(infodump_dir).glob("*.txt"):
+        with open(txt_file) as f:
+            timestamp = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
+            txt_file_timestamps.append(timestamp)
+
+    infodump_date = min(txt_file_timestamps)
 
     df_users = pl.read_csv(
         source=os.path.join(infodump_dir, "usernames.txt"),

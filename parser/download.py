@@ -21,10 +21,13 @@ def get_publication_timestamp():
         )
 
 
-def download_file(user_agent, filename, infodump_dir):
+def download_file(filename, infodump_dir, user_agent):
     url = INFODUMP_BASE_URL + filename + ".txt.zip"
     print(f"Download and extract {url}")
-    with urlopen(Request(url, headers={"User-Agent": user_agent})) as f:
+    headers = {}
+    if user_agent is not None:
+        headers["User-Agent"] = user_agent
+    with urlopen(Request(url, headers)) as f:
         with ZipFile(BytesIO(f.read())) as zip:
             zip.extract(filename + ".txt", infodump_dir)
 
@@ -47,7 +50,7 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
 
     # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
     infodump_path = Path(infodump_dir)
-    if download_required or (dev and not (infodump_path / "usernames.txt").exists()):
+    if download_required or (dev and not (infodump_path / "commentdata_mefi.txt").exists()):
         print("Download Infodump")
 
         if infodump_path.exists():
@@ -57,10 +60,10 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
         else:
             infodump_path.mkdir()
 
-        download_file(user_agent, "usernames", infodump_dir)
+        download_file("usernames", infodump_dir, user_agent)
         for site in SITES:
-            download_file(user_agent, f"postdata_{site}", infodump_dir)
-            download_file(user_agent, f"commentdata_{site}", infodump_dir)
+            download_file(f"postdata_{site}", infodump_dir, user_agent)
+            download_file(f"commentdata_{site}", infodump_dir, user_agent)
 
     if download_required or dev:
         print(f'Parsing data from "{infodump_dir}" to "{output_path}"')
@@ -75,7 +78,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     user_agent = os.environ.get("INFODUMP_USER_AGENT")
-    if not user_agent:
-        raise ValueError("INFODUMP_USER_AGENT not set")
 
     download_infodump(args.dev, args.infodump_dir, args.output_path, user_agent)

@@ -140,7 +140,7 @@
 
     let timeSeriesMin = 0 // filter chart x-axis by time period (unix timestamp ms)
     const START_YEAR = json["all"]._start_year
-    const LATEST_MONTH = json["all"]._start_month - 1 + json["all"].posts.length - 1
+    const LATEST_MONTH_INDEX = json["all"]._start_month - 1 + json["all"].posts.length - 1
 
     $: {
         switch ($params.time) {
@@ -151,13 +151,13 @@
                 timeSeriesMin = new Date(2020, 0, 1).getTime()
                 break
             case "last10y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 10 * 12 + 1, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH_INDEX - 10 * 12 + 1, 1).getTime()
                 break
             case "last5y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 5 * 12 + 1, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH_INDEX - 5 * 12 + 1, 1).getTime()
                 break
             case "last2y":
-                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH - 2 * 12 + 1, 1).getTime()
+                timeSeriesMin = new Date(START_YEAR, LATEST_MONTH_INDEX - 2 * 12 + 1, 1).getTime()
                 break
             default:
                 timeSeriesMin = 0
@@ -216,12 +216,12 @@
             <strong>{json._published}</strong>. Infodump updates show here within 24 hours.
         </li>
         <li>
-            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH, 1))}</strong>, which is the
-            last completed month in the Infodump.
+            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH_INDEX, 1))}</strong>, which is
+            the last completed month in the Infodump.
         </li>
         <li>
             <strong>Active users</strong> means users who made <strong>at least one comment or post</strong> on the
-            selected site in the given month. For different definitions of activity, see
+            selected site in the given month. For a breakdown of users by level of activity, see
             <a href="#monthly_users_by_number_of_posts_and_comments">this chart</a>.
         </li>
         <li>
@@ -231,6 +231,10 @@
             <strong>Not affiliated with MetaFilter.com</strong>.
         </li>
     </ul>
+    <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
+        <strong>August 2025 notice:</strong> the Infodump has had some problems recently. Our charts run to the last month
+        we have complete data for.
+    </div>
     <h2>Users</h2>
     <div class="chart">
         <ChartTitle text="Monthly active users" />
