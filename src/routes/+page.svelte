@@ -228,7 +228,7 @@
             Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
             or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
             <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>.
-            <strong>Not affiliated with MetaFilter.com</strong>.
+            Not an official MetaFilter product.
         </li>
     </ul>
     <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
