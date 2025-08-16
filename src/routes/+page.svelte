@@ -179,7 +179,7 @@
     <link rel="canonical" href="https://mefist.at/" />
 </svelte:head>
 
-<div class="mx-auto max-w-[1280px] xl:border-x xl:border-mefi-paler">
+<div class="mx-auto max-w-[1280px] pb-4 xl:border-x xl:border-mefi-paler">
     <header class="sticky top-0 z-20 mb-2 select-none">
         <div class="flex h-10 items-center bg-mefi-blue text-white">
             <h1 class="grow pl-4 text-lg xs:text-2xl">
@@ -227,8 +227,8 @@
         <li>
             Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
             or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
-            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>.
-            Not an official MetaFilter product.
+            <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not an official MetaFilter
+            product.
         </li>
     </ul>
     <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
