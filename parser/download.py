@@ -2,8 +2,9 @@ import argparse
 import json
 import os
 import re
+import shutil
+import tempfile
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
@@ -21,15 +22,28 @@ def get_publication_timestamp():
         )
 
 
-def download_file(filename, infodump_dir, user_agent):
+def download_zip(filename, infodump_dir, user_agent):
     url = INFODUMP_BASE_URL + filename + ".txt.zip"
     print(f"Download and extract {url}")
-    headers = {}
+
+    req = Request(url)
     if user_agent is not None:
-        headers["User-Agent"] = user_agent
-    with urlopen(Request(url, headers)) as f:
-        with ZipFile(BytesIO(f.read())) as zip:
-            zip.extract(filename + ".txt", infodump_dir)
+        req.add_header("User-Agent", user_agent)
+
+    try:
+        with urlopen(req) as resp, tempfile.NamedTemporaryFile(delete=False) as tmp:
+            shutil.copyfileobj(resp, tmp)
+            tmp_path = tmp.name
+
+        with ZipFile(tmp_path) as zip:
+            member = filename + ".txt"
+            with (
+                zip.open(member) as src,
+                open(os.path.join(infodump_dir, member), "wb") as dst,
+            ):
+                shutil.copyfileobj(src, dst)
+    finally:
+        os.remove(tmp_path)
 
 
 def download_infodump(dev, infodump_dir, output_path, user_agent):
@@ -50,7 +64,9 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
 
     # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
     infodump_path = Path(infodump_dir)
-    if download_required or (dev and not (infodump_path / "commentdata_mefi.txt").exists()):
+    if download_required or (
+        dev and not (infodump_path / "commentdata_mefi.txt").exists()
+    ):
         print("Download Infodump")
 
         if infodump_path.exists():
@@ -60,10 +76,10 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
         else:
             infodump_path.mkdir()
 
-        download_file("usernames", infodump_dir, user_agent)
+        download_zip("usernames", infodump_dir, user_agent)
         for site in SITES:
-            download_file(f"postdata_{site}", infodump_dir, user_agent)
-            download_file(f"commentdata_{site}", infodump_dir, user_agent)
+            download_zip(f"postdata_{site}", infodump_dir, user_agent)
+            download_zip(f"commentdata_{site}", infodump_dir, user_agent)
 
     if download_required or dev:
         print(f'Parsing data from "{infodump_dir}" to "{output_path}"')
