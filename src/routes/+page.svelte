@@ -83,9 +83,9 @@
     ChartJS.defaults.plugins.tooltip.position = "cursor"
 
     const updateURL = (key: string, value: string) => {
-        const u = new URL(window.location.href)
-        u.searchParams.set(key, value)
-        goto(u, { replaceState: true, noScroll: true })
+        const url = new URL(window.location.href)
+        url.searchParams.set(key, value)
+        goto(url, { replaceState: true, noScroll: true })
     }
 
     const hideJumpMenu = () => (showJumpMenu = false)
@@ -128,15 +128,15 @@
 
     let activeUsers = $derived(json[data.site].users_monthly[0])
 
-    const monthLabelsAll = Array.from({ length: json["all"].posts.length }, (_, i) =>
+    const MONTH_LABELS_ALL = Array.from({ length: json["all"].posts.length }, (_, i) =>
         new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
     )
 
-    let monthLabelsSite = $derived(monthLabelsAll.slice(json["all"].posts.length - json[data.site].posts.length))
+    let monthLabelsSite = $derived(MONTH_LABELS_ALL.slice(json["all"].posts.length - json[data.site].posts.length))
 
     // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
-    const askMePostsPadded = padSeriesLeft("askme", json["askme"].posts, 0)
-    const totalPostsExAskMe = json["all"].posts.map((n, i) => n - askMePostsPadded[i])
+    const POSTS_ASK = padSeriesLeft("askme", json["askme"].posts, 0)
+    const POSTS_EXCLUDING_ASK = json["all"].posts.map((n, i) => n - POSTS_ASK[i])
 </script>
 
 <svelte:head>
@@ -310,7 +310,7 @@
         title="Cumulative registered and active users"
         type="line"
         data={{
-            labels: monthLabelsAll,
+            labels: MONTH_LABELS_ALL,
             datasets: [
                 ...SITES_KEYS.map(
                     (site): ChartDataset => ({
@@ -510,7 +510,7 @@
                 {
                     label: "Percentage of posts deleted",
                     data: json[data.site].posts_deleted.map(
-                        (v, i) => v / (data.site === "all" ? totalPostsExAskMe : json[data.site].posts)[i]
+                        (v, i) => v / (data.site === "all" ? POSTS_EXCLUDING_ASK : json[data.site].posts)[i]
                     ),
                     backgroundColor: COLORS.deleted,
                 },
@@ -527,7 +527,7 @@
                         afterTitle: ([{ dataIndex }]) => [
                             "Deleted: " + NUMBER_FORMAT.format(json[data.site].posts_deleted[dataIndex]),
                             data.site === "all"
-                                ? "Total (ex AskMe): " + NUMBER_FORMAT.format(totalPostsExAskMe[dataIndex])
+                                ? "Total (ex AskMe): " + NUMBER_FORMAT.format(POSTS_EXCLUDING_ASK[dataIndex])
                                 : "Total: " + NUMBER_FORMAT.format(json[data.site].posts[dataIndex]),
                         ],
                     },
