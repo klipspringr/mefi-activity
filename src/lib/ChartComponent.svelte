@@ -41,7 +41,6 @@
             chart.data = data
             chart.options = options
             chart.update()
-            console.log(`Updated "${title}"`)
         }
     })
 </script>

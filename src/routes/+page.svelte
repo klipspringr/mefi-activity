@@ -13,6 +13,7 @@
         PERCENT_OPTIONS,
         PERIODS,
         SITES,
+        SITES_KEYS,
         TOP_N,
         type TPeriod,
         type TSite,
@@ -31,7 +32,7 @@
         TimeSeriesScale,
         Tooltip,
         type ActiveElement,
-        type ChartTypeRegistry,
+        type ChartDataset,
         type Point,
         type TooltipItem,
     } from "chart.js"
@@ -61,9 +62,6 @@
     ChartJS.defaults.responsive = true
     ChartJS.defaults.maintainAspectRatio = false
 
-    ChartJS.defaults.parsing = false
-    ChartJS.defaults.normalized = true
-
     ChartJS.defaults.datasets.bar.barPercentage = 1
     ChartJS.defaults.datasets.bar.categoryPercentage = 1
     ChartJS.defaults.datasets.line.pointStyle = false
@@ -84,24 +82,26 @@
     Tooltip.positioners.cursor = (_: ActiveElement[], eventPos: Point) => eventPos
     ChartJS.defaults.plugins.tooltip.position = "cursor"
 
-    const daysInMonth = (timestamp: number) => {
-        const d = new Date(timestamp)
-        return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() // zeroth day of next month = last day of this month
+    const updateURL = (key: string, value: string) => {
+        const u = new URL(window.location.href)
+        u.searchParams.set(key, value)
+        goto(u, { replaceState: true, noScroll: true })
     }
+
+    const hideJumpMenu = () => (showJumpMenu = false)
 
     const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
     const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
         "Total monthly active: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
 
+    const daysInMonth = (timestamp: number) => {
+        const d = new Date(timestamp)
+        return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() // zeroth day of next month = last day of this month
+    }
+
     const tooltipPerDay = (ctx: TooltipItem<"bar">[]) =>
         "Per day: " + NUMBER_FORMAT.format(Math.round(ctx[0].parsed.y / daysInMonth(ctx[0].parsed.x)))
-
-    const constructData = (series: number[], mapFn?: (v: number, i: number) => number, categoryLabels = false) =>
-        series.map((v, i) => ({
-            x: categoryLabels ? i : monthlyLabels[i],
-            y: mapFn ? mapFn(v, i) : v,
-        }))
 
     const padSeriesLeft = (site: TSite, series: number[], value: number): number[] =>
         Array(json["all"].posts.length - json[site].posts.length)
@@ -109,12 +109,6 @@
             .concat(series)
 
     const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
-
-    const hideJumpMenu = () => (showJumpMenu = false)
-
-    // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
-    const askMePostsPadded = padSeriesLeft("askme", json["askme"].posts, 0)
-    const totalPostsExAskMe = json["all"].posts.map((n, i) => n - askMePostsPadded[i])
 
     let showJumpMenu = $state(false)
 
@@ -132,19 +126,17 @@
 
     let timeSeriesMin = $derived(TIMESERIES_MIN[data.period])
 
-    const updateURL = (key: string, value: string) => {
-        const u = new URL(window.location.href)
-        u.searchParams.set(key, value)
-        goto(u, { replaceState: true, noScroll: true })
-    }
+    let activeUsers = $derived(json[data.site].users_monthly[0])
 
-    let monthlyLabels = $derived(
-        json[data.site].posts.map((_, i) =>
-            new Date(json[data.site]._start_year, json[data.site]._start_month + i - 1, 1).getTime()
-        )
+    const monthLabelsAll = Array.from({ length: json["all"].posts.length }, (_, i) =>
+        new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
     )
 
-    let activeUsers = $derived(json[data.site].users_monthly[0])
+    let monthLabelsSite = $derived(monthLabelsAll.slice(json["all"].posts.length - json[data.site].posts.length))
+
+    // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
+    const askMePostsPadded = padSeriesLeft("askme", json["askme"].posts, 0)
+    const totalPostsExAskMe = json["all"].posts.map((n, i) => n - askMePostsPadded[i])
 </script>
 
 <svelte:head>
@@ -219,9 +211,10 @@
         title="Monthly active users"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].users_monthly_by_joined.map((counts, i) => ({
                 label: "Joined " + (json._start_joinyear + i),
-                data: constructData(counts),
+                data: counts,
                 backgroundColor: color(i),
             })),
         }}
@@ -236,9 +229,10 @@
         title="Monthly active users by year joined"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].users_monthly_by_joined.map((counts, i) => ({
                 label: "Joined " + (json._start_joinyear + i),
-                data: constructData(counts, (v, j) => v / activeUsers[j]),
+                data: counts.map((v, j) => v / activeUsers[j]),
                 backgroundColor: color(i),
             })),
         }}
@@ -253,9 +247,10 @@
         title="Monthly users by number of posts and comments"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].users_monthly.map((counts, level) => ({
                 label: `${ACTIVITY_LEVELS[level]}+`,
-                data: constructData(counts),
+                data: counts,
                 backgroundColor: color(level),
                 order: -level,
             })),
@@ -273,11 +268,12 @@
         title="New and cumulative active users"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     type: "bar",
                     label: "Users first active (R axis)",
-                    data: constructData(json[data.site].users_new),
+                    data: json[data.site].users_new,
                     backgroundColor: COLORS.users_new,
                     yAxisID: "y_new",
                     order: 1,
@@ -285,7 +281,7 @@
                 {
                     type: "line",
                     label: "Users ever active (L axis)",
-                    data: constructData(json[data.site].users_cum),
+                    data: json[data.site].users_cum,
                     borderColor: COLORS.sites.all,
                     backgroundColor: COLORS.white,
                     yAxisID: "y_cum",
@@ -314,21 +310,25 @@
         title="Cumulative registered and active users"
         type="line"
         data={{
-            datasets: (Object.keys(SITES) as TSite[])
-                .map((site) => ({
-                    type: "line" as keyof ChartTypeRegistry,
-                    label: String(SITES[site]),
-                    data: constructData(padSeriesLeft(site, json[data.site].users_cum, NaN)),
-                    borderColor: COLORS.sites[site],
-                    backgroundColor: COLORS.white,
-                }))
-                .concat({
-                    type: "bar" as keyof ChartTypeRegistry,
+            labels: monthLabelsAll,
+            datasets: [
+                ...SITES_KEYS.map(
+                    (site): ChartDataset => ({
+                        type: "line",
+                        label: String(SITES[site]),
+                        data: padSeriesLeft(site, json[site].users_cum, NaN),
+                        borderColor: COLORS.sites[site],
+                        backgroundColor: COLORS.sites[site],
+                    })
+                ),
+                {
+                    type: "bar",
                     label: "Registered users",
-                    data: constructData(json["all"].users_registered),
+                    data: json["all"].users_registered,
                     borderColor: COLORS.users_registered,
                     backgroundColor: COLORS.users_registered,
-                }),
+                },
+            ],
         }}
         options={{
             scales: {
@@ -349,9 +349,10 @@
         title="Posts and comments by user account age"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].activity_by_age.map((counts, i) => ({
                 label: AGE_LABELS[i],
-                data: constructData(counts, (c, j) => c / (json[data.site].posts[j] + json[data.site].comments[j])),
+                data: counts.map((c, j) => c / (json[data.site].posts[j] + json[data.site].comments[j])),
                 backgroundColor: color(i),
             })),
         }}
@@ -370,9 +371,10 @@
         title="Posts by most active posters"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].posts_top_users.map((counts, i) => ({
                 label: `Top ${TOP_N[i] * 100}%`,
-                data: constructData(counts),
+                data: counts,
                 backgroundColor: color(i),
             })),
         }}
@@ -390,9 +392,10 @@
         title="Comments by most active commenters"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: json[data.site].comments_top_users.map((counts, i) => ({
                 label: `Top ${TOP_N[i] * 100}%`,
-                data: constructData(counts),
+                data: counts,
                 backgroundColor: color(i),
             })),
         }}
@@ -412,10 +415,11 @@
         title="Posts"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Posts",
-                    data: constructData(json[data.site].posts),
+                    data: json[data.site].posts,
                     backgroundColor: COLORS.posts,
                 },
             ],
@@ -431,10 +435,11 @@
         title="Comments"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Comments",
-                    data: constructData(json[data.site].comments),
+                    data: json[data.site].comments,
                     backgroundColor: COLORS.comments,
                 },
             ],
@@ -450,10 +455,11 @@
         title="Posts per active user"
         type="line"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Posts per active user",
-                    data: constructData(json[data.site].posts, (v, i) => v / activeUsers[i]),
+                    data: json[data.site].posts.map((v, i) => v / activeUsers[i]),
                     borderColor: COLORS.posts,
                 },
             ],
@@ -467,10 +473,11 @@
         title="Comments per active user"
         type="line"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Comments per active user",
-                    data: constructData(json[data.site].comments, (v, i) => v / activeUsers[i]),
+                    data: json[data.site].comments.map((v, i) => v / activeUsers[i]),
                     borderColor: COLORS.comments,
                 },
             ],
@@ -482,10 +489,11 @@
         title="Comments per post"
         type="line"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Comments per post",
-                    data: constructData(json[data.site].comments, (v, i) => v / json[data.site].posts[i]),
+                    data: json[data.site].comments.map((v, i) => v / json[data.site].posts[i]),
                     borderColor: COLORS.comments,
                 },
             ],
@@ -497,11 +505,11 @@
         title="Deleted posts"
         type="bar"
         data={{
+            labels: monthLabelsSite,
             datasets: [
                 {
                     label: "Percentage of posts deleted",
-                    data: constructData(
-                        json[data.site].posts_deleted,
+                    data: json[data.site].posts_deleted.map(
                         (v, i) => v / (data.site === "all" ? totalPostsExAskMe : json[data.site].posts)[i]
                     ),
                     backgroundColor: COLORS.deleted,
@@ -538,12 +546,12 @@
             datasets: [
                 {
                     label: "Posts",
-                    data: constructData(json[data.site].posts_weekdays_percent, undefined, true),
+                    data: json[data.site].posts_weekdays_percent.map((y, i) => ({ x: i, y })),
                     backgroundColor: COLORS.posts,
                 },
                 {
                     label: "Comments",
-                    data: constructData(json[data.site].comments_weekdays_percent, undefined, true),
+                    data: json[data.site].comments_weekdays_percent.map((y, i) => ({ x: i, y })),
                     backgroundColor: COLORS.comments,
                 },
             ],
@@ -564,12 +572,12 @@
             datasets: [
                 {
                     label: "Posts",
-                    data: constructData(json[data.site].posts_hours_percent, undefined, true),
+                    data: json[data.site].posts_hours_percent,
                     backgroundColor: COLORS.posts,
                 },
                 {
                     label: "Comments",
-                    data: constructData(json[data.site].comments_hours_percent, undefined, true),
+                    data: json[data.site].comments_hours_percent,
                     backgroundColor: COLORS.comments,
                 },
             ],

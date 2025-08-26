@@ -6,6 +6,7 @@ export const SITES = {
     fanfare: "FanFare",
     music: "Music",
 } as const
+export const SITES_KEYS = Object.keys(SITES) as (keyof typeof SITES)[]
 export type TSite = keyof typeof SITES
 export const isSite = (value: string): value is TSite => value in SITES
 
