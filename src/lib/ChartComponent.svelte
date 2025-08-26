@@ -8,21 +8,24 @@
         type Plugin,
         type Point,
     } from "chart.js"
-    import { onMount } from "svelte"
+    import { onMount, type Snippet } from "svelte"
 
-    export let title: string
+    interface Props {
+        title: string
+        type: keyof ChartTypeRegistry
+        data: ChartData<typeof type, (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>
+        options: ChartOptions<typeof type>
+        plugins?: Plugin<typeof type>[]
+        tall?: boolean
+        children?: Snippet
+    }
 
-    export let type: keyof ChartTypeRegistry
-    export let data: ChartData<typeof type, (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>
-    export let options: ChartOptions<typeof type>
-    export let plugins: Plugin<typeof type>[] = []
+    let { title, type, data, options, plugins = [], tall = false, children }: Props = $props()
 
-    export let tall = false
-
-    let chart: Chart | null = null
+    let chart: Chart | null
     let canvasElement: HTMLCanvasElement
 
-    let anchor = title.trim().toLowerCase().replace(/\W/g, "_")
+    let anchor = $derived(title.trim().toLowerCase().replace(/\W/g, "_"))
 
     onMount(() => {
         chart = new Chart(canvasElement, {
@@ -33,14 +36,14 @@
         })
     })
 
-    $: {
+    $effect(() => {
         if (chart) {
             chart.data = data
             chart.options = options
             chart.update()
             console.log(`Updated "${title}"`)
         }
-    }
+    })
 </script>
 
 <div class="mb-8 px-2 sm:px-4">
@@ -48,12 +51,12 @@
         {title} <a href="#{anchor}" class="text-lg font-black text-mefi-pale hover:text-mefi-blue">#</a>
     </h3>
     <div class="relative {tall ? 'h-[70vw] sm:h-[50vw]' : 'h-[60vw] sm:h-[50vw]'} sm:max-h-[640px]">
-        <canvas bind:this={canvasElement} />
+        <canvas bind:this={canvasElement}></canvas>
     </div>
-    {#if $$slots.default}
+    {#if children}
         <div
             class="mt-2 text-sm before:mr-1 before:text-xs before:font-black before:uppercase before:text-mefi-blue before:content-['Note'] sm:text-base">
-            <slot />
+            {@render children()}
         </div>
     {/if}
 </div>

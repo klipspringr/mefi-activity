@@ -5,9 +5,9 @@ export const SITES = {
     meta: "MetaTalk",
     fanfare: "FanFare",
     music: "Music",
-}
-export const SITES_KEYS = Object.keys(SITES) as Array<TSite>
+} as const
 export type TSite = keyof typeof SITES
+export const isSite = (value: string): value is TSite => value in SITES
 
 export const PERIODS = {
     all: "All time",
@@ -16,8 +16,9 @@ export const PERIODS = {
     last10y: "Last 10 years",
     last5y: "Last 5 years",
     last2y: "Last 2 years",
-}
+} as const
 export type TPeriod = keyof typeof PERIODS
+export const isPeriod = (value: string): value is TPeriod => value in PERIODS
 
 // need to keep these consistent with config.py
 export const ACTIVITY_LEVELS = [1, 5, 10, 25, 50]
