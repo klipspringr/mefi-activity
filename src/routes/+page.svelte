@@ -1,6 +1,6 @@
 <script lang="ts">
     import { browser } from "$app/environment"
-    import ChartTitle from "$lib/ChartTitle.svelte"
+    import ChartComponent from "$lib/ChartComponent.svelte"
     import {
         ACTIVITY_LEVELS,
         AGE_LABELS,
@@ -36,7 +36,6 @@
         type TooltipItem,
     } from "chart.js"
     import "chartjs-adapter-date-fns"
-    import { Chart } from "svelte-chartjs"
     import { fade } from "svelte/transition"
     import { queryParameters } from "sveltekit-search-params"
     import "../app.css"
@@ -236,435 +235,374 @@
         we have complete data for.
     </div>
     <h2>Users</h2>
-    <div class="chart">
-        <ChartTitle text="Monthly active users" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
-                        label: "Joined " + (json._start_joinyear + i),
-                        data: constructData(counts),
-                        backgroundColor: color(i),
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: true, ticks: { callback: tickCompact } },
-                    },
-                    plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Monthly active users by year joined" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
-                        label: "Joined " + (json._start_joinyear + i),
-                        data: constructData(counts, (v, j) => v / activeUsers[j]),
-                        backgroundColor: color(i),
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
-                    },
-                    plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Monthly users by number of posts and comments" />
-        <div class="chartjs tall">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].users_monthly.map((counts, level) => ({
-                        label: `${ACTIVITY_LEVELS[level]}+`,
-                        data: constructData(counts),
-                        backgroundColor: color(level),
-                        order: -level,
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: false, ticks: { callback: tickCompact } },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true, reverse: true } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="New and cumulative active users" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: [
-                        {
-                            type: "bar",
-                            label: "Users first active (R axis)",
-                            data: constructData(json[$params.site].users_new),
-                            backgroundColor: COLORS.users_new,
-                            yAxisID: "y_new",
-                            order: 1,
-                        },
-                        {
-                            type: "line",
-                            label: "Users ever active (L axis)",
-                            data: constructData(json[$params.site].users_cum),
-                            borderColor: COLORS.sites.all,
-                            backgroundColor: COLORS.white,
-                            yAxisID: "y_cum",
-                        },
-                    ],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y_cum: {
-                            type: "linear",
-                            position: "left",
-                            ticks: { callback: tickCompact },
-                        },
-                        y_new: {
-                            type: "linear",
-                            position: "right",
-                            grid: { drawOnChartArea: false },
-                            ticks: { callback: tickCompact },
-                        },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Cumulative registered and active users" />
-        <div class="chartjs tall">
-            <Chart
-                type="line"
-                data={{
-                    datasets: SITES_KEYS.map((site) => ({
-                        type: LINE_CHART_TYPE,
-                        label: String(SITES[site]),
-                        data: constructData(padSeriesLeft(site, json[site].users_cum, NaN)),
-                        borderColor: COLORS.sites[site],
-                        backgroundColor: COLORS.white,
-                    })).concat({
-                        type: BAR_CHART_TYPE,
-                        label: "Registered users",
-                        data: constructData(json["all"].users_registered),
-                        borderColor: COLORS.users_registered,
-                        backgroundColor: COLORS.users_registered,
-                    }),
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: { ticks: { callback: tickCompact } },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-        <div class="note">
-            <strong>Registered users</strong> (shaded area) completed the signup process.
-            <strong>Active users</strong> (lines) made at least one post or comment on a given site.
-            <strong>Users' ID numbers</strong> are much higher, because the site allocates an ID before signup is completed.
-        </div>
-    </div>
+    <ChartComponent
+        title="Monthly active users"
+        type="bar"
+        data={{
+            datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
+                label: "Joined " + (json._start_joinyear + i),
+                data: constructData(counts),
+                backgroundColor: color(i),
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: true, ticks: { callback: tickCompact } },
+            },
+            plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
+        }} />
+    <ChartComponent
+        title="Monthly active users by year joined"
+        type="bar"
+        data={{
+            datasets: json[$params.site].users_monthly_by_joined.map((counts, i) => ({
+                label: "Joined " + (json._start_joinyear + i),
+                data: constructData(counts, (v, j) => v / activeUsers[j]),
+                backgroundColor: color(i),
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
+            },
+            plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
+        }} />
+    <ChartComponent
+        title="Monthly users by number of posts and comments"
+        type="bar"
+        data={{
+            datasets: json[$params.site].users_monthly.map((counts, level) => ({
+                label: `${ACTIVITY_LEVELS[level]}+`,
+                data: constructData(counts),
+                backgroundColor: color(level),
+                order: -level,
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: false, ticks: { callback: tickCompact } },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true, reverse: true } },
+        }}
+        tall />
+    <ChartComponent
+        title="New and cumulative active users"
+        type="bar"
+        data={{
+            datasets: [
+                {
+                    type: "bar",
+                    label: "Users first active (R axis)",
+                    data: constructData(json[$params.site].users_new),
+                    backgroundColor: COLORS.users_new,
+                    yAxisID: "y_new",
+                    order: 1,
+                },
+                {
+                    type: "line",
+                    label: "Users ever active (L axis)",
+                    data: constructData(json[$params.site].users_cum),
+                    borderColor: COLORS.sites.all,
+                    backgroundColor: COLORS.white,
+                    yAxisID: "y_cum",
+                },
+            ],
+        }}
+        options={{
+            scales: {
+                x: { type: "timeseries", min: timeSeriesMin },
+                y_cum: {
+                    type: "linear",
+                    position: "left",
+                    ticks: { callback: tickCompact },
+                },
+                y_new: {
+                    type: "linear",
+                    position: "right",
+                    grid: { drawOnChartArea: false },
+                    ticks: { callback: tickCompact },
+                },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }} />
+    <ChartComponent
+        title="Cumulative registered and active users"
+        type="line"
+        data={{
+            datasets: SITES_KEYS.map((site) => ({
+                type: LINE_CHART_TYPE,
+                label: String(SITES[site]),
+                data: constructData(padSeriesLeft(site, json[site].users_cum, NaN)),
+                borderColor: COLORS.sites[site],
+                backgroundColor: COLORS.white,
+            })).concat({
+                type: BAR_CHART_TYPE,
+                label: "Registered users",
+                data: constructData(json["all"].users_registered),
+                borderColor: COLORS.users_registered,
+                backgroundColor: COLORS.users_registered,
+            }),
+        }}
+        options={{
+            scales: {
+                x: { type: "timeseries", min: timeSeriesMin },
+                y: { ticks: { callback: tickCompact } },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}
+        tall>
+        <strong>Registered users</strong> (shaded area) completed the signup process.
+        <strong>Active users</strong> (lines) made at least one post or comment on a given site.
+        <strong>Users' ID numbers</strong> are much higher, because the site allocates an ID before signup is completed.
+    </ChartComponent>
 
     <h2>Activity distribution</h2>
-    <div class="chart">
-        <ChartTitle text="Posts and comments by user account age" />
-        <div class="chartjs tall">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].activity_by_age.map((counts, i) => ({
-                        label: AGE_LABELS[i],
-                        data: constructData(
-                            counts,
-                            (c, j) => c / (json[$params.site].posts[j] + json[$params.site].comments[j])
-                        ),
-                        backgroundColor: color(i),
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-        <div class="note">User account age at time of posting or commenting.</div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Posts by most active posters" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].posts_top_users.map((counts, i) => ({
-                        label: `Top ${TOP_N[i] * 100}%`,
-                        data: constructData(counts),
-                        backgroundColor: color(i),
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: false, max: 0.6, ticks: { format: PERCENT_OPTIONS } },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-        <div class="note">Percentage of posts made by the <em>n</em> per cent of users who made the most posts.</div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Comments by most active commenters" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: json[$params.site].comments_top_users.map((counts, i) => ({
-                        label: `Top ${TOP_N[i] * 100}%`,
-                        data: constructData(counts),
-                        backgroundColor: color(i),
-                    })),
-                }}
-                options={{
-                    scales: {
-                        x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                        y: { stacked: false, max: 0.7, ticks: { format: PERCENT_OPTIONS } },
-                    },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-        <div class="note">
-            Percentage of comments made by the <em>n</em> per cent of users who made the most comments.
-        </div>
-    </div>
+    <ChartComponent
+        title="Posts and comments by user account age"
+        type="bar"
+        data={{
+            datasets: json[$params.site].activity_by_age.map((counts, i) => ({
+                label: AGE_LABELS[i],
+                data: constructData(
+                    counts,
+                    (c, j) => c / (json[$params.site].posts[j] + json[$params.site].comments[j])
+                ),
+                backgroundColor: color(i),
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}
+        tall>
+        User account age at time of posting or commenting.
+    </ChartComponent>
+    <ChartComponent
+        title="Posts by most active posters"
+        type="bar"
+        data={{
+            datasets: json[$params.site].posts_top_users.map((counts, i) => ({
+                label: `Top ${TOP_N[i] * 100}%`,
+                data: constructData(counts),
+                backgroundColor: color(i),
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: false, max: 0.6, ticks: { format: PERCENT_OPTIONS } },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}>
+        Percentage of posts made by the <em>n</em> per cent of users who made the most posts.
+    </ChartComponent>
+    <ChartComponent
+        title="Comments by most active commenters"
+        type="bar"
+        data={{
+            datasets: json[$params.site].comments_top_users.map((counts, i) => ({
+                label: `Top ${TOP_N[i] * 100}%`,
+                data: constructData(counts),
+                backgroundColor: color(i),
+            })),
+        }}
+        options={{
+            scales: {
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
+                y: { stacked: false, max: 0.7, ticks: { format: PERCENT_OPTIONS } },
+            },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}>
+        Percentage of comments made by the <em>n</em> per cent of users who made the most comments.
+    </ChartComponent>
 
     <h2>Posts and comments</h2>
-    <div class="chart">
-        <ChartTitle text="Posts" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: [
-                        {
-                            label: "Posts",
-                            data: constructData(json[$params.site].posts),
-                            backgroundColor: COLORS.posts,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: { ticks: { callback: tickCompact } },
+    <ChartComponent
+        title="Posts"
+        type="bar"
+        data={{
+            datasets: [
+                {
+                    label: "Posts",
+                    data: constructData(json[$params.site].posts),
+                    backgroundColor: COLORS.posts,
+                },
+            ],
+        }}
+        options={{
+            scales: {
+                x: { type: "timeseries", min: timeSeriesMin },
+                y: { ticks: { callback: tickCompact } },
+            },
+            plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
+        }} />
+    <ChartComponent
+        title="Comments"
+        type="bar"
+        data={{
+            datasets: [
+                {
+                    label: "Comments",
+                    data: constructData(json[$params.site].comments),
+                    backgroundColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            scales: {
+                x: { type: "timeseries", min: timeSeriesMin },
+                y: { ticks: { callback: tickCompact } },
+            },
+            plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
+        }} />
+    <ChartComponent
+        title="Posts per active user"
+        type="line"
+        data={{
+            datasets: [
+                {
+                    label: "Posts per active user",
+                    data: constructData(json[$params.site].posts, (v, i) => v / activeUsers[i]),
+                    borderColor: COLORS.posts,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: Math.max(timeSeriesMin, new Date(2001, 0, 1).getTime()) } },
+        }}>
+        1999 and 2000 are excluded so later years are readable. September 1999 saw 20 posts per active user.
+    </ChartComponent>
+    <ChartComponent
+        title="Comments per active user"
+        type="line"
+        data={{
+            datasets: [
+                {
+                    label: "Comments per active user",
+                    data: constructData(json[$params.site].comments, (v, i) => v / activeUsers[i]),
+                    borderColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin } },
+        }} />
+    <ChartComponent
+        title="Comments per post"
+        type="line"
+        data={{
+            datasets: [
+                {
+                    label: "Comments per post",
+                    data: constructData(json[$params.site].comments, (v, i) => v / json[$params.site].posts[i]),
+                    borderColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin } },
+        }} />
+    <ChartComponent
+        title="Deleted posts"
+        type="bar"
+        data={{
+            datasets: [
+                {
+                    label: "Percentage of posts deleted",
+                    data: constructData(
+                        json[$params.site].posts_deleted,
+                        (v, i) => v / ($params.site === "all" ? totalPostsExAskMe : json[$params.site].posts)[i]
+                    ),
+                    backgroundColor: COLORS.deleted,
+                },
+            ],
+        }}
+        options={{
+            scales: {
+                x: { type: "timeseries", min: timeSeriesMin },
+                y: { ticks: { format: PERCENT_OPTIONS } },
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        afterTitle: ([{ dataIndex }]) => [
+                            "Deleted: " + NUMBER_FORMAT.format(json[$params.site].posts_deleted[dataIndex]),
+                            $params.site === "all"
+                                ? "Total (ex AskMe): " + NUMBER_FORMAT.format(totalPostsExAskMe[dataIndex])
+                                : "Total: " + NUMBER_FORMAT.format(json[$params.site].posts[dataIndex]),
+                        ],
                     },
-                    plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Comments" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: [
-                        {
-                            label: "Comments",
-                            data: constructData(json[$params.site].comments),
-                            backgroundColor: COLORS.comments,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: { ticks: { callback: tickCompact } },
-                    },
-                    plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Posts per active user" />
-        <div class="chartjs">
-            <Chart
-                type="line"
-                data={{
-                    datasets: [
-                        {
-                            label: "Posts per active user",
-                            data: constructData(json[$params.site].posts, (v, i) => v / activeUsers[i]),
-                            borderColor: COLORS.posts,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: { x: { type: "timeseries", min: Math.max(timeSeriesMin, new Date(2001, 0, 1).getTime()) } },
-                }} />
-        </div>
-        <div class="note">
-            1999 and 2000 are excluded so later years are readable. September 1999 saw 20 posts per active user.
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Comments per active user" />
-        <div class="chartjs">
-            <Chart
-                type="line"
-                data={{
-                    datasets: [
-                        {
-                            label: "Comments per active user",
-                            data: constructData(json[$params.site].comments, (v, i) => v / activeUsers[i]),
-                            borderColor: COLORS.comments,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: { x: { type: "timeseries", min: timeSeriesMin } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Comments per post" />
-        <div class="chartjs">
-            <Chart
-                type="line"
-                data={{
-                    datasets: [
-                        {
-                            label: "Comments per post",
-                            data: constructData(json[$params.site].comments, (v, i) => v / json[$params.site].posts[i]),
-                            borderColor: COLORS.comments,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: { x: { type: "timeseries", min: timeSeriesMin } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Deleted posts" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    datasets: [
-                        {
-                            label: "Percentage of posts deleted",
-                            data: constructData(
-                                json[$params.site].posts_deleted,
-                                (v, i) => v / ($params.site === "all" ? totalPostsExAskMe : json[$params.site].posts)[i]
-                            ),
-                            backgroundColor: COLORS.deleted,
-                        },
-                    ],
-                }}
-                options={{
-                    scales: {
-                        x: { type: "timeseries", min: timeSeriesMin },
-                        y: { ticks: { format: PERCENT_OPTIONS } },
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                afterTitle: ([{ dataIndex }]) => [
-                                    "Deleted: " + NUMBER_FORMAT.format(json[$params.site].posts_deleted[dataIndex]),
-                                    $params.site === "all"
-                                        ? "Total (ex AskMe): " + NUMBER_FORMAT.format(totalPostsExAskMe[dataIndex])
-                                        : "Total: " + NUMBER_FORMAT.format(json[$params.site].posts[dataIndex]),
-                                ],
-                            },
-                        },
-                    },
-                }} />
-        </div>
-        <div class="note">Infodump excludes deleted Ask MetaFilter questions.</div>
-    </div>
+                },
+            },
+        }}>
+        Infodump excludes deleted Ask MetaFilter questions.
+    </ChartComponent>
 
     <h2>Activity by time period</h2>
-    <div class="chart">
-        <ChartTitle text="Posts and comments by day of week" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    labels: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    datasets: [
-                        {
-                            label: "Posts",
-                            data: constructData(json[$params.site].posts_weekdays_percent, undefined, true),
-                            backgroundColor: COLORS.posts,
-                        },
-                        {
-                            label: "Comments",
-                            data: constructData(json[$params.site].comments_weekdays_percent, undefined, true),
-                            backgroundColor: COLORS.comments,
-                        },
-                    ],
-                }}
-                options={{
-                    datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
-                    scales: { y: { max: 0.2, ticks: { format: PERCENT_OPTIONS } } },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-    </div>
-    <div class="chart">
-        <ChartTitle text="Posts and comments by hour" />
-        <div class="chartjs">
-            <Chart
-                type="bar"
-                data={{
-                    labels: Array.from({ length: 24 }, (_, i) => HOUR_FORMAT.format(i * 60 * 60 * 1000)),
-                    datasets: [
-                        {
-                            label: "Posts",
-                            data: constructData(json[$params.site].posts_hours_percent, undefined, true),
-                            backgroundColor: COLORS.posts,
-                        },
-                        {
-                            label: "Comments",
-                            data: constructData(json[$params.site].comments_hours_percent, undefined, true),
-                            backgroundColor: COLORS.comments,
-                        },
-                    ],
-                }}
-                options={{
-                    datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
-                    scales: { y: { max: 0.07, ticks: { format: PERCENT_OPTIONS } } },
-                    interaction: { mode: "index" },
-                    plugins: { legend: { display: true } },
-                }} />
-        </div>
-        <div class="note">
-            Post and comment timestamps are Pacific Time. Day of week and hour charts can be filtered by site but not by
-            time period.
-        </div>
-    </div>
+    <ChartComponent
+        title="Posts and comments by day of week"
+        type="bar"
+        data={{
+            labels: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            datasets: [
+                {
+                    label: "Posts",
+                    data: constructData(json[$params.site].posts_weekdays_percent, undefined, true),
+                    backgroundColor: COLORS.posts,
+                },
+                {
+                    label: "Comments",
+                    data: constructData(json[$params.site].comments_weekdays_percent, undefined, true),
+                    backgroundColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
+            scales: { y: { max: 0.2, ticks: { format: PERCENT_OPTIONS } } },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}>
+        Timestamps are recorded on the MetaFilter server in Pacific Time. This chart can't be filtered by time period.
+    </ChartComponent>
+    <ChartComponent
+        title="Posts and comments by hour"
+        type="bar"
+        data={{
+            labels: Array.from({ length: 24 }, (_, i) => HOUR_FORMAT.format(i * 60 * 60 * 1000)),
+            datasets: [
+                {
+                    label: "Posts",
+                    data: constructData(json[$params.site].posts_hours_percent, undefined, true),
+                    backgroundColor: COLORS.posts,
+                },
+                {
+                    label: "Comments",
+                    data: constructData(json[$params.site].comments_hours_percent, undefined, true),
+                    backgroundColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
+            scales: { y: { max: 0.07, ticks: { format: PERCENT_OPTIONS } } },
+            interaction: { mode: "index" },
+            plugins: { legend: { display: true } },
+        }}>
+        Timestamps are recorded on the MetaFilter server in Pacific Time. This chart can't be filtered by time period.
+    </ChartComponent>
 </div>
 
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -718,22 +656,6 @@
 
     a {
         @apply font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
-    }
-
-    div.chart {
-        @apply mb-8 px-2 sm:px-4;
-    }
-
-    div.chartjs {
-        @apply relative h-[60vw] sm:h-[50vw] sm:max-h-[640px];
-    }
-
-    div.chartjs.tall {
-        @apply h-[70vw] sm:h-[50vw];
-    }
-
-    div.note {
-        @apply mt-2 text-sm before:mr-1 before:text-xs before:font-black before:uppercase before:text-mefi-blue before:content-["Note"] sm:text-base;
     }
 
     header select,
