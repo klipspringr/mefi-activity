@@ -2,6 +2,8 @@ import { browser } from "$app/environment"
 import { isSite, isPeriod, type TPeriod, type TSite } from "$lib/common"
 import type { PageLoad } from "./$types"
 
+export const prerender = true
+
 export const load: PageLoad = ({ url }) => {
     let site: TSite = "all"
     let period: TPeriod = "all"
