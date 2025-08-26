@@ -13,4 +13,4 @@ vite.config.ts.timestamp-*
 __pycache__
 
 /infodump
-/parser/research*
+/calculate/research*

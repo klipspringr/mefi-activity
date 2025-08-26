@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Download and parse",
+            "name": "Download and calculate stats",
             "type": "debugpy",
             "request": "launch",
-            "program": "parser/download.py",
+            "program": "calculate/download.py",
             "console": "integratedTerminal",
             "args": "-d infodump src/data/data.json",
             "env": {

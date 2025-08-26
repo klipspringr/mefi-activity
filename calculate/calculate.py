@@ -24,10 +24,11 @@ def extract_month(col_name):
     return pl.date(col(col_name).dt.year(), col(col_name).dt.month(), 1)
 
 
+# load infodump txt files into polars dataframes
 def load_dfs(
     infodump_dir,
 ) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
-    # sometimes the infodump contains text files were exported at different times
+    # sometimes the infodump contains text files which were exported at different times
     # set infodump_date to the earliest timestamp
     txt_file_timestamps = []
 
@@ -182,9 +183,10 @@ def load_dfs(
 
 
 def filter_by_site(site, df: DataFrame) -> DataFrame:
-    return df.filter(col("site") == site) if site != "all" else df
+    return df if site == "all" else df.filter(col("site") == site)
 
 
+# construct posts and comments dataframes for the given site
 def get_site_dfs(
     site,
     df_posts_all: DataFrame,
@@ -195,7 +197,8 @@ def get_site_dfs(
     df_comments = filter_by_site(site, df_comments_all)
     df_activity = filter_by_site(site, df_activity_all)
 
-    # range of months from min to max. this is better than group_by_dynamic(period="1mo") because it includes all months even if no data
+    # range of months from min to max
+    # use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity
     df_months = DataFrame(
         {
             "month": pl.date_range(
@@ -210,7 +213,8 @@ def get_site_dfs(
     return df_months, df_posts, df_comments, df_activity
 
 
-def parse(infodump_dir, output_path, publication_timestamp=None):
+# crunch infodump data into a json stats file
+def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
     (
         joinyears,
         df_users,
@@ -226,7 +230,7 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
     }
 
     for site in SITES + ["all"]:
-        print("Parsing " + site)
+        print(f'Calculating stats for "{site}"')
 
         df_months, df_posts, df_comments, df_activity = get_site_dfs(
             site, df_posts_all, df_comments_all, df_activity_all
@@ -347,8 +351,8 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
 
         out[site]["posts_deleted"] = df_posts_deleted.get_column("deleted").to_list()
 
-        for label, df in {"posts": df_posts, "comments": df_comments}.items():
-            out[site][label] = (
+        for kind, df in {"posts": df_posts, "comments": df_comments}.items():
+            out[site][kind] = (
                 df_months.join(
                     df.select("month"), on="month", how="left", coalesce=True
                 )
@@ -358,7 +362,7 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                 .to_list()
             )
 
-            out[site][f"{label}_weekdays_percent"] = (
+            out[site][f"{kind}_weekdays_percent"] = (
                 df.select("datestamp")
                 .group_by(col("datestamp").dt.weekday().alias("weekday"))
                 .len()
@@ -368,7 +372,7 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                 .to_list()
             )
 
-            out[site][f"{label}_hours_percent"] = (
+            out[site][f"{kind}_hours_percent"] = (
                 df.select("datestamp")
                 .group_by(col("datestamp").dt.hour().alias("hour"))
                 .len()
@@ -397,7 +401,7 @@ def parse(infodump_dir, output_path, publication_timestamp=None):
                 .select(pl.all().round(3))
             )
 
-            out[site][f"{label}_top_users"] = [
+            out[site][f"{kind}_top_users"] = [
                 c.to_list() for c in df_activity_by_top_users.get_columns()
             ]
 

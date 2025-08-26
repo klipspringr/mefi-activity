@@ -33,12 +33,12 @@ jobs:
                   cache: "pip"
 
             - name: Install pip requirements
-              run: pip install -r parser/requirements.txt
+              run: pip install -r calculate/requirements.txt
 
             - name: Check for Infodump updates
               env:
                   INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
-              run: python parser/download.py infodump src/data/data.json
+              run: python calculate/download.py infodump src/data/data.json
 
             - name: Push any update
               run: |

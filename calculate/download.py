@@ -9,8 +9,8 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
+from calculate import calculate_stats
 from config import INFODUMP_BASE_URL, INFODUMP_HOMEPAGE, KEY_TIMESTAMP, SITES
-from parse import parse
 
 
 def get_publication_timestamp():
@@ -58,7 +58,7 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
                 and last_json[KEY_TIMESTAMP] == publication_timestamp
             ):
                 print(
-                    f"Latest Infodump ({publication_timestamp}) already parsed to {output_path}"
+                    f'"{output_path}" already reflects latest Infodump ({publication_timestamp})'
                 )
                 download_required = False
 
@@ -82,8 +82,8 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
             download_zip(f"commentdata_{site}", infodump_dir, user_agent)
 
     if download_required or dev:
-        print(f'Parsing data from "{infodump_dir}" to "{output_path}"')
-        parse(infodump_dir, output_path, publication_timestamp)
+        print(f'Reading files from "{infodump_dir}", writing stats to "{output_path}"')
+        calculate_stats(infodump_dir, output_path, publication_timestamp)
 
 
 if __name__ == "__main__":
