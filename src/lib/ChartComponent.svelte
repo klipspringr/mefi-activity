@@ -22,26 +22,20 @@
 
     let { title, type, data, options, plugins = [], tall = false, children }: Props = $props()
 
-    let chart: Chart | null
+    let chart: Chart
     let canvasElement: HTMLCanvasElement
 
     let anchor = $derived(title.trim().toLowerCase().replace(/\W/g, "_"))
 
     onMount(() => {
-        chart = new Chart(canvasElement, {
-            type,
-            data: { datasets: [] },
-            options: {},
-            plugins,
-        })
+        chart = new Chart(canvasElement, { type, data, options, plugins })
+        return () => chart?.destroy()
     })
 
     $effect(() => {
-        if (chart) {
-            chart.data = data
-            chart.options = options
-            chart.update()
-        }
+        chart.data = data
+        chart.options = options
+        chart.update()
     })
 </script>
 
@@ -53,9 +47,14 @@
         <canvas bind:this={canvasElement}></canvas>
     </div>
     {#if children}
-        <div
-            class="mt-2 text-sm before:mr-1 before:text-xs before:font-black before:uppercase before:text-mefi-blue before:content-['Note'] sm:text-base">
+        <div class="note mt-2 text-sm sm:text-base">
             {@render children()}
         </div>
     {/if}
 </div>
+
+<style type="postcss">
+    .note::before {
+        @apply mr-1 bg-mefi-paler px-1.5 py-0.5 text-xs font-black uppercase text-mefi-blue content-['Note'];
+    }
+</style>
