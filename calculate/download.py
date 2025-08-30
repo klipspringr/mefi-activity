@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
-from calculate import calculate_stats
+from calc import calculate_stats
 from config import INFODUMP_BASE_URL, INFODUMP_HOMEPAGE, KEY_TIMESTAMP, SITES
 
 
