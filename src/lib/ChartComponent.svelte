@@ -8,6 +8,7 @@
         type Plugin,
         type Point,
     } from "chart.js"
+    import "chartjs-adapter-date-fns"
     import { onMount, type Snippet } from "svelte"
 
     interface Props {

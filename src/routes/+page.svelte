@@ -18,69 +18,13 @@
         type TPeriod,
         type TSite,
     } from "$lib/common"
-    import {
-        BarController,
-        BarElement,
-        CategoryScale,
-        Chart as ChartJS,
-        Colors,
-        Legend,
-        LinearScale,
-        LineController,
-        LineElement,
-        PointElement,
-        TimeSeriesScale,
-        Tooltip,
-        type ActiveElement,
-        type ChartDataset,
-        type Point,
-        type TooltipItem,
-    } from "chart.js"
-    import "chartjs-adapter-date-fns"
+    import type { ChartDataset, TooltipItem } from "chart.js"
     import { fade } from "svelte/transition"
     import "../app.css"
     import * as json from "../data/data.json"
     import type { PageProps } from "./$types"
 
     let { data }: PageProps = $props()
-
-    ChartJS.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        Colors,
-        Legend,
-        LinearScale,
-        LineController,
-        LineElement,
-        PointElement,
-        TimeSeriesScale,
-        Tooltip
-    )
-
-    ChartJS.defaults.animation = false
-    ChartJS.defaults.responsive = true
-    ChartJS.defaults.maintainAspectRatio = false
-
-    ChartJS.defaults.datasets.bar.barPercentage = 1
-    ChartJS.defaults.datasets.bar.categoryPercentage = 1
-    ChartJS.defaults.datasets.line.pointStyle = false
-
-    ChartJS.defaults.scales.linear.beginAtZero = true
-    ChartJS.defaults.scales.linear.grid = { display: true, z: 1 }
-    ChartJS.defaults.scales.timeseries.grid = { display: true, z: 1 }
-    ChartJS.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
-    ChartJS.defaults.scales.timeseries.ticks.callback = (v) => {
-        const d = new Date(v)
-        return d.getMonth() == 6 ? d.getFullYear() : undefined
-    }
-
-    ChartJS.defaults.plugins.legend.display = false
-    ChartJS.defaults.plugins.legend.position = "bottom"
-    ChartJS.defaults.plugins.legend.onClick = () => {}
-
-    Tooltip.positioners.cursor = (_: ActiveElement[], eventPos: Point) => eventPos
-    ChartJS.defaults.plugins.tooltip.position = "cursor"
 
     const updateURL = (key: string, value: string) => {
         const url = new URL(window.location.href)
