@@ -215,6 +215,13 @@
             labels: monthLabelsSite,
             datasets: [
                 {
+                    type: "line",
+                    label: "Net",
+                    data: json[data.site].users_first.map((v, i) => v - json[data.site].users_last[i]),
+                    backgroundColor: COLORS.sites.all,
+                    borderColor: COLORS.sites.all,
+                },
+                {
                     type: "bar",
                     label: "Users first active",
                     data: json[data.site].users_first,
@@ -225,13 +232,6 @@
                     label: "Users last active",
                     data: json[data.site].users_last.map((v) => -v),
                     backgroundColor: COLORS.deleted,
-                },
-                {
-                    type: "line",
-                    label: "Net",
-                    data: json[data.site].users_first.map((v, i) => v - json[data.site].users_last[i]),
-                    borderColor: COLORS.sites.all,
-                    order: -1,
                 },
             ],
         }}
