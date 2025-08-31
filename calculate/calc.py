@@ -319,20 +319,31 @@ def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
             c.to_list() for c in df_activity_by_age.get_columns()
         ]
 
-        df_users_new = (
+        df_users_first = (
             df_months.join(
                 df_activity.select("userid", "month").unique("userid", keep="first"),
                 on="month",
                 how="left",
-                coalesce=True,
             )
             .group_by("month")
-            .agg(new=col("userid").count())
+            .agg(first=col("userid").len())
         )
 
-        out[site]["users_new"] = df_users_new.get_column("new").to_list()
+        out[site]["users_first"] = df_users_first.get_column("first").to_list()
 
-        df_users_cum = df_users_new.select("month", cum=col("new").cum_sum())
+        df_users_last = (
+            df_months.join(
+                df_activity.select("userid", "month").unique("userid", keep="last"),
+                on="month",
+                how="left",
+            )
+            .group_by("month")
+            .agg(last=col("userid").len())
+        )
+
+        out[site]["users_last"] = df_users_last.get_column("last").to_list()
+
+        df_users_cum = df_users_first.select("month", cum=col("first").cum_sum())
 
         out[site]["users_cum"] = df_users_cum.get_column("cum").to_list()
 

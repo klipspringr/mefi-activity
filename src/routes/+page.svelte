@@ -209,47 +209,52 @@
         }}
         tall />
     <ChartComponent
-        title="New and cumulative active users"
+        title="Users first and last active"
         type="bar"
         data={{
             labels: monthLabelsSite,
             datasets: [
                 {
                     type: "bar",
-                    label: "Users first active (R axis)",
-                    data: json[data.site].users_new,
+                    label: "Users first active",
+                    data: json[data.site].users_first,
                     backgroundColor: COLORS.users_new,
-                    yAxisID: "y_new",
-                    order: 1,
+                },
+                {
+                    type: "bar",
+                    label: "Users last active",
+                    data: json[data.site].users_last.map((v) => -v),
+                    backgroundColor: COLORS.deleted,
                 },
                 {
                     type: "line",
-                    label: "Users ever active (L axis)",
-                    data: json[data.site].users_cum,
+                    label: "Net",
+                    data: json[data.site].users_first.map((v, i) => v - json[data.site].users_last[i]),
                     borderColor: COLORS.sites.all,
-                    backgroundColor: COLORS.white,
-                    yAxisID: "y_cum",
+                    order: -1,
                 },
             ],
         }}
         options={{
             scales: {
-                x: { type: "timeseries", min: timeSeriesMin },
-                y_cum: {
+                x: { type: "timeseries", stacked: true, min: timeSeriesMin },
+                y: {
                     type: "linear",
-                    position: "left",
                     ticks: { callback: tickCompact },
-                },
-                y_new: {
-                    type: "linear",
-                    position: "right",
-                    grid: { drawOnChartArea: false },
-                    ticks: { callback: tickCompact },
+                    afterDataLimits: function (scale) {
+                        const max = Math.min(1000, Math.max(Math.abs(scale.min), Math.abs(scale.max)))
+                        scale.min = -max
+                        scale.max = max
+                    },
                 },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
-        }} />
+        }}>
+        Number of users who made their first (or last) post or comment on the site in the given month. Take care
+        interpreting this chart: recent months will naturally show large numbers of users last active. This doesn't
+        imply they permanently left the site.
+    </ChartComponent>
     <ChartComponent
         title="Cumulative registered and active users"
         type="line"
