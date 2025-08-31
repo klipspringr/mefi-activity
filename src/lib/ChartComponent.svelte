@@ -48,14 +48,11 @@
         <canvas bind:this={canvasElement}></canvas>
     </div>
     {#if children}
-        <div class="note mt-2 text-sm sm:text-base">
-            {@render children()}
+        <div class="mt-2 grid grid-cols-[auto_1fr] gap-x-2 text-sm sm:text-base">
+            <div class="bg-mefi-paler p-1 text-xs font-black uppercase tracking-wider text-mefi-blue">Note</div>
+            <div>
+                {@render children()}
+            </div>
         </div>
     {/if}
 </div>
-
-<style type="postcss">
-    .note::before {
-        @apply mr-1 bg-mefi-paler px-1.5 py-0.5 text-xs font-black uppercase text-mefi-blue content-['Note'];
-    }
-</style>

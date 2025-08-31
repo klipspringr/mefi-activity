@@ -289,8 +289,8 @@
         }}
         tall>
         <strong>Registered users</strong> (shaded area) completed the signup process.
-        <strong>Active users</strong> (lines) made at least one post or comment on a given site.
-        <strong>Users' ID numbers</strong> are much higher, because the site allocates an ID before signup is completed.
+        <strong>Active users</strong> (lines) made at least one post or comment on the given site.
+        <strong>User ID numbers</strong> (not shown) are much higher, because the site allocates an ID before signup is completed.
     </ChartComponent>
 
     <h2>Activity distribution</h2>
