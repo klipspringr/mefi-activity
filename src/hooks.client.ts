@@ -43,13 +43,8 @@ export const init: ClientInit = () => {
     Chart.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
     Chart.defaults.scales.timeseries.ticks.callback = (v) => {
         const d = new Date(v)
-        return d.getMonth() == 6 ? d.getFullYear() : undefined
+        return d.getMonth() === 6 ? d.getFullYear() : undefined
     }
-
-    // these lines cause the gridlines glitch
-    // we work around the glitch by letting $effect call update() after initialising (which would otherwise be unnecessary)
-    Chart.defaults.scales.linear.grid = { z: 1 }
-    Chart.defaults.scales.timeseries.grid = { z: 1 }
 
     Chart.defaults.plugins.legend.display = false
     Chart.defaults.plugins.legend.position = "bottom"

@@ -49,7 +49,9 @@
     </div>
     {#if children}
         <div class="mt-2 grid grid-cols-[auto_1fr] gap-x-2 text-sm sm:text-base">
-            <div class="bg-mefi-paler p-1 text-xs font-black uppercase tracking-wider text-mefi-blue">Note</div>
+            <div class="select-none bg-mefi-paler p-1 text-xs font-black uppercase tracking-wider text-mefi-blue">
+                Note
+            </div>
             <div>
                 {@render children()}
             </div>

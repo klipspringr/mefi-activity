@@ -164,8 +164,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: true, ticks: { callback: tickCompact } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: true, ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
             plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
         }} />
@@ -182,8 +182,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
             plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
         }} />
@@ -201,8 +201,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: false, ticks: { callback: tickCompact } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: false, ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true, reverse: true } },
@@ -237,10 +237,11 @@
         }}
         options={{
             scales: {
-                x: { type: "timeseries", stacked: true, min: timeSeriesMin },
+                x: { type: "timeseries", stacked: true, min: timeSeriesMin, grid: { z: 1 } },
                 y: {
                     type: "linear",
                     ticks: { callback: tickCompact },
+                    grid: { z: 1 },
                     afterDataLimits: function (scale) {
                         const max = Math.min(1000, Math.max(Math.abs(scale.min), Math.abs(scale.max)))
                         scale.min = -max
@@ -251,9 +252,9 @@
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
         }}>
-        Number of users who made their first (or last) post or comment on the site in the given month. Take care
-        interpreting this chart: recent months will naturally show large numbers of users last active. This doesn't
-        imply they permanently left the site.
+        Number of users who made their first (or last) post or comment on the site in the given month.
+        <strong>Take care interpreting this chart:</strong> recent months will naturally show large numbers of users last
+        active. This doesn't imply they permanently left the site.
     </ChartComponent>
     <ChartComponent
         title="Cumulative registered and active users"
@@ -281,8 +282,8 @@
         }}
         options={{
             scales: {
-                x: { type: "timeseries", min: timeSeriesMin },
-                y: { ticks: { callback: tickCompact } },
+                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
@@ -307,8 +308,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
@@ -329,8 +330,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: false, max: 0.6, ticks: { format: PERCENT_OPTIONS } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: false, max: 0.6, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
@@ -350,8 +351,8 @@
         }}
         options={{
             scales: {
-                x: { stacked: true, type: "timeseries", min: timeSeriesMin },
-                y: { stacked: false, max: 0.7, ticks: { format: PERCENT_OPTIONS } },
+                x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { stacked: false, max: 0.7, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
@@ -375,8 +376,8 @@
         }}
         options={{
             scales: {
-                x: { type: "timeseries", min: timeSeriesMin },
-                y: { ticks: { callback: tickCompact } },
+                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
             plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
         }} />
@@ -395,8 +396,8 @@
         }}
         options={{
             scales: {
-                x: { type: "timeseries", min: timeSeriesMin },
-                y: { ticks: { callback: tickCompact } },
+                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
             plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
         }} />
@@ -467,8 +468,8 @@
         }}
         options={{
             scales: {
-                x: { type: "timeseries", min: timeSeriesMin },
-                y: { ticks: { format: PERCENT_OPTIONS } },
+                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                y: { ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
             plugins: {
                 tooltip: {
@@ -495,19 +496,19 @@
             datasets: [
                 {
                     label: "Posts",
-                    data: json[data.site].posts_weekdays_percent.map((y, i) => ({ x: i, y })),
+                    data: json[data.site].posts_weekdays_percent.map((y, x) => ({ x, y })),
                     backgroundColor: COLORS.posts,
                 },
                 {
                     label: "Comments",
-                    data: json[data.site].comments_weekdays_percent.map((y, i) => ({ x: i, y })),
+                    data: json[data.site].comments_weekdays_percent.map((y, x) => ({ x, y })),
                     backgroundColor: COLORS.comments,
                 },
             ],
         }}
         options={{
             datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
-            scales: { y: { max: 0.2, ticks: { format: PERCENT_OPTIONS } } },
+            scales: { y: { max: 0.2, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } } },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
         }}>
@@ -533,7 +534,7 @@
         }}
         options={{
             datasets: { bar: { categoryPercentage: 0.9, barPercentage: 1 } },
-            scales: { y: { max: 0.07, ticks: { format: PERCENT_OPTIONS } } },
+            scales: { y: { max: 0.07, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } } },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
         }}>
