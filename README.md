@@ -34,6 +34,6 @@ To remind myself how it works in future:
 - run `python calculate/download.py --dev infodump src/data/data.json`
   - this downloads Infodump files to the `infodump` directory and outputs stats to `src/data/data.json`. with the `-d|--dev` flag, we always regenerate the json, even if there is no new Infodump
 
-## Notebook
+## Notebooks
 
-- `calculate/notebook.ipynb` makes testing Polars expressions easier. It is not used to generate the live site. Install Jupyter kernel requirements from `calculate/requirements_notebook.txt`. Some packages are included to support the Data Wrangler VS Code extension
+- Jupyter notebooks (in `notebooks/`) are an easy way of developing and testing Polars expressions. They are not used to generate the live site. Install Jupyter kernel requirements from `notebooks/requirements.txt`. This includes packages needed by the Data Wrangler extension for VS Code.

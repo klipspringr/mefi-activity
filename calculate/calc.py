@@ -5,7 +5,7 @@ import pathlib
 from typing import Tuple
 
 import polars as pl
-from config import ACTIVITY_LEVELS, AGE_THRESHOLDS, KEY_TIMESTAMP, SITES, TOP_N
+from .config import ACTIVITY_LEVELS, AGE_THRESHOLDS, KEY_TIMESTAMP, SITES, TOP_N
 from polars import DataFrame, Enum, UInt8, UInt32, col, lit
 
 
