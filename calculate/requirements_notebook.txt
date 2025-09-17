@@ -1,3 +1,4 @@
+altair==5.5.0
 anyio==4.8.0
 argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
@@ -44,6 +45,7 @@ jupyterlab_server==2.27.3
 MarkupSafe==3.0.2
 matplotlib-inline==0.1.7
 mistune==3.1.2
+narwhals==2.5.0
 nbclient==0.10.2
 nbconvert==7.16.6
 nbformat==5.10.4
