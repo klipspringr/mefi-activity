@@ -37,7 +37,7 @@
     const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
     const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
-        "Total monthly active: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
+        "Total: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
 
     const daysInMonth = (timestamp: number) => {
         const d = new Date(timestamp)
@@ -135,29 +135,25 @@
             the last completed month in the Infodump.
         </li>
         <li>
-            <strong>Active users</strong> means users who made <strong>at least one comment or post</strong> on the
-            selected site in the given month. For a breakdown of users by level of activity, see
-            <a href="#monthly_users_by_number_of_posts_and_comments">this chart</a>.
-        </li>
-        <li>
             Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
             or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
             <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not an official MetaFilter
             product.
         </li>
     </ul>
-    <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
+    <!-- <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
         <strong>August 2025 notice:</strong> the Infodump has had some problems recently. Our charts run to the last month
         we have complete data for.
-    </div>
+    </div> -->
     <h2>Users</h2>
     <ChartComponent
-        title="Monthly active users"
+        title="Users who posted or commented"
+        titleForAnchor="Monthly active users"
         type="bar"
         data={{
             labels: monthLabelsSite,
             datasets: json[data.site].users_monthly_by_joined.map((counts, i) => ({
-                label: "Joined " + (json._start_joinyear + i),
+                label: "Joined in " + (json._start_joinyear + i),
                 data: counts,
                 backgroundColor: color(i),
             })),
@@ -170,12 +166,13 @@
             plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
         }} />
     <ChartComponent
-        title="Monthly active users by year joined"
+        title="Users who posted or commented, by year joined"
+        titleForAnchor="Monthly active users by year joined"
         type="bar"
         data={{
             labels: monthLabelsSite,
             datasets: json[data.site].users_monthly_by_joined.map((counts, i) => ({
-                label: "Joined " + (json._start_joinyear + i),
+                label: "Joined in " + (json._start_joinyear + i),
                 data: counts.map((v, j) => v / activeUsers[j]),
                 backgroundColor: color(i),
             })),
@@ -188,7 +185,8 @@
             plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
         }} />
     <ChartComponent
-        title="Monthly users by number of posts and comments"
+        title="Users by number of posts and comments"
+        titleForAnchor="Monthly users by number of posts and comments"
         type="bar"
         data={{
             labels: monthLabelsSite,
@@ -257,7 +255,8 @@
         active. This doesn't imply they permanently left the site.
     </ChartComponent>
     <ChartComponent
-        title="Cumulative registered and active users"
+        title="Cumulative number of users"
+        titleForAnchor="Cumulative registered and active users"
         type="line"
         data={{
             labels: MONTH_LABELS_ALL,
@@ -289,9 +288,10 @@
             plugins: { legend: { display: true } },
         }}
         tall>
-        <strong>Registered users</strong> (shaded area) completed the signup process.
-        <strong>Active users</strong> (lines) made at least one post or comment on the given site.
-        <strong>User ID numbers</strong> (not shown) are much higher, because the site allocates an ID before signup is completed.
+        <strong>Registered users (shaded area)</strong> completed the signup process.
+        <strong>Users (lines)</strong> made at least one post or comment on the given site.
+        <strong>User ID numbers</strong> (not shown) are much higher, because the site allocates an ID number for incomplete
+        signups.
     </ChartComponent>
 
     <h2>Activity distribution</h2>
@@ -315,7 +315,7 @@
             plugins: { legend: { display: true } },
         }}
         tall>
-        User account age at time of posting or commenting.
+        Age of user account at time of posting or commenting.
     </ChartComponent>
     <ChartComponent
         title="Posts by most active posters"
@@ -402,13 +402,14 @@
             plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
         }} />
     <ChartComponent
-        title="Posts per active user"
+        title="Posts per user"
+        titleForAnchor="Posts per active user"
         type="line"
         data={{
             labels: monthLabelsSite,
             datasets: [
                 {
-                    label: "Posts per active user",
+                    label: "Posts per user",
                     data: json[data.site].posts.map((v, i) => v / activeUsers[i]),
                     borderColor: COLORS.posts,
                 },
@@ -417,16 +418,18 @@
         options={{
             scales: { x: { type: "timeseries", min: Math.max(timeSeriesMin, new Date(2001, 0, 1).getTime()) } },
         }}>
-        1999 and 2000 are excluded so later years are readable. September 1999 saw 20 posts per active user.
+        Number of posts divided by number of users who posted or commented at least once in the month. 1999 and 2000 are
+        excluded so later years are readable. September 1999 saw 20 posts per user.
     </ChartComponent>
     <ChartComponent
-        title="Comments per active user"
+        title="Comments per user"
+        titleForAnchor="Comments per active user"
         type="line"
         data={{
             labels: monthLabelsSite,
             datasets: [
                 {
-                    label: "Comments per active user",
+                    label: "Comments per user",
                     data: json[data.site].comments.map((v, i) => v / activeUsers[i]),
                     borderColor: COLORS.comments,
                 },
@@ -434,7 +437,9 @@
         }}
         options={{
             scales: { x: { type: "timeseries", min: timeSeriesMin } },
-        }} />
+        }}>
+        Number of comments divided by number of users who posted or commented at least once in the month.
+    </ChartComponent>
     <ChartComponent
         title="Comments per post"
         type="line"

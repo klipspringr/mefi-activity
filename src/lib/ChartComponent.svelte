@@ -11,22 +11,30 @@
     import "chartjs-adapter-date-fns"
     import { onMount, type Snippet } from "svelte"
 
-    interface Props {
+    let {
+        title,
+        titleForAnchor,
+        type,
+        data,
+        options,
+        plugins = [],
+        tall = false,
+        children,
+    }: {
         title: string
+        titleForAnchor?: string
         type: keyof ChartTypeRegistry
         data: ChartData<typeof type, (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>
         options: ChartOptions<typeof type>
         plugins?: Plugin<typeof type>[]
         tall?: boolean
         children?: Snippet
-    }
-
-    let { title, type, data, options, plugins = [], tall = false, children }: Props = $props()
+    } = $props()
 
     let chart: Chart
     let canvasElement: HTMLCanvasElement
 
-    let anchor = $derived(title.trim().toLowerCase().replace(/\W/g, "_"))
+    let anchor = $derived((titleForAnchor || title).trim().toLowerCase().replace(/\W/g, "_"))
 
     onMount(() => {
         chart = new Chart(canvasElement, { type, data, options, plugins })
