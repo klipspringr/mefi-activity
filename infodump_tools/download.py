@@ -10,16 +10,20 @@ from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 from infodump_tools.calculate import calculate_stats
-from infodump_tools.config import INFODUMP_BASE_URL, INFODUMP_HOMEPAGE, KEY_TIMESTAMP, SITES
+from infodump_tools.config import (
+    INFODUMP_BASE_URL,
+    INFODUMP_HOMEPAGE,
+    KEY_TIMESTAMP,
+    SITES,
+)
 
 
 def get_publication_timestamp():
     with urlopen(INFODUMP_HOMEPAGE) as f:
         contents = f.read().decode("utf-8")
         raw_date = re.search("Last updated: <b>(.+)</b>", contents).group(1).strip()
-        return datetime.strptime(raw_date, "%a %b %d %H:%M:%S %Y").strftime(
-            "%-d %B %Y %H:%M"
-        )
+        published = datetime.strptime(raw_date, "%a %b %d %H:%M:%S %Y")
+        return published.strftime("%-d %B %Y %H:%M")
 
 
 def download_zip(filename, infodump_dir, user_agent):
@@ -57,9 +61,7 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
                 KEY_TIMESTAMP in last_json
                 and last_json[KEY_TIMESTAMP] == publication_timestamp
             ):
-                print(
-                    f'"{output_path}" already reflects latest Infodump ({publication_timestamp})'
-                )
+                print(f"No new Infodump (latest is {publication_timestamp})")
                 download_required = False
 
     # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
@@ -67,7 +69,7 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
     if download_required or (
         dev and not (infodump_path / "commentdata_mefi.txt").exists()
     ):
-        print("Download Infodump")
+        print(f"Download Infodump (published {publication_timestamp})")
 
         if infodump_path.exists():
             print(f'Delete "{infodump_dir}/*.txt"')
