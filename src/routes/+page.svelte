@@ -124,7 +124,7 @@
         </div>
     </header>
 
-    <h2 class="menu-ignore">Notes</h2>
+    <h2 data-menu-ignore>Notes</h2>
     <ul class="mb-4 ml-4 list-outside list-disc px-2 marker:text-mefi-blue sm:px-4">
         <li>
             Data is from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published on
@@ -141,10 +141,6 @@
             product.
         </li>
     </ul>
-    <!-- <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
-        <strong>August 2025 notice:</strong> the Infodump has had some problems recently. Our charts run to the last month
-        we have complete data for.
-    </div> -->
     <h2>Users</h2>
     <ChartComponent
         title="Users who posted or commented"
@@ -550,7 +546,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <menu
-    class="fixed right-0 top-0 z-50 h-screen max-w-[90vw] overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
+    class="fixed right-0 top-0 z-50 h-screen max-w-[90vw] select-none overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
     class:translate-x-0={showJumpMenu}
     class:translate-x-full={!showJumpMenu}
     class:border-l-4={showJumpMenu}>
@@ -562,7 +558,7 @@
                 onclick={hideJumpMenu}>&times;</button>
         </li>
         {#if browser}
-            {#each document.querySelectorAll("h2:not(.menu-ignore), h3") as h}
+            {#each document.querySelectorAll("h2:not([data-menu-ignore]), h3") as h}
                 {#if h.tagName === "H2"}
                     <li class="pt-4 text-base font-black uppercase tracking-[0.15em] text-mefi-pale">
                         {h.textContent}
@@ -589,11 +585,11 @@
 
 <style lang="postcss">
     :global(h1, h2, h3) {
-        @apply select-none font-black;
+        @apply font-black;
     }
 
     h2 {
-        @apply mb-2 bg-mefi-paler px-2 py-1 text-base uppercase tracking-[0.15em] text-mefi-blue sm:px-4;
+        @apply mb-2 select-none bg-mefi-paler px-2 py-1 text-base uppercase tracking-[0.15em] text-mefi-blue sm:px-4;
     }
 
     a {
