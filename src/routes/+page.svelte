@@ -127,20 +127,24 @@
     <h2 data-menu-ignore>Notes</h2>
     <ul class="mb-4 ml-4 list-outside list-disc px-2 marker:text-mefi-blue sm:px-4">
         <li>
-            Data is from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published on
-            <strong>{json._published}</strong>. Infodump updates show here within 24 hours.
+            Data from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published
+            <strong>{json._published}</strong>. Updates appear here within 24 hours of publication.
         </li>
         <li>
-            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH_INDEX, 1))}</strong>, which is
-            the last completed month in the Infodump.
+            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH_INDEX, 1))}</strong>, the
+            latest completed month in the Infodump.
         </li>
         <li>
-            Any problems or comments, <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
+            Questions or comments? <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
             or <a href="https://github.com/klipspringr/mefi-activity/issues">open an issue</a>.
             <a href="https://github.com/klipspringr/mefi-activity">Source on GitHub</a>. Not an official MetaFilter
             product.
         </li>
     </ul>
+    <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
+        <strong>Note (November 2025):</strong> the Infodump has recently had problems (e.g. missing recent months, delayed
+        publication). These have been reported to MeFi.
+    </div>
     <h2>Users</h2>
     <ChartComponent
         title="Users who posted or commented"
