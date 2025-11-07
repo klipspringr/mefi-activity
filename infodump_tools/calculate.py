@@ -5,7 +5,13 @@ import pathlib
 from typing import Tuple
 
 import polars as pl
-from infodump_tools.config import ACTIVITY_LEVELS, AGE_THRESHOLDS, KEY_TIMESTAMP, SITES, TOP_N
+from infodump_tools.config import (
+    ACTIVITY_LEVELS,
+    AGE_THRESHOLDS,
+    KEY_TIMESTAMP,
+    SITES,
+    TOP_N,
+)
 from polars import DataFrame, Enum, UInt8, UInt32, col, lit
 
 
@@ -30,14 +36,16 @@ def load_dfs(
 ) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
     # sometimes the infodump contains text files which were exported at different times
     # set infodump_date to the earliest timestamp
-    txt_file_timestamps = []
+    file_timestamps = dict()
 
-    for txt_file in pathlib.Path(infodump_dir).glob("*.txt"):
-        with open(txt_file) as f:
+    for path in pathlib.Path(infodump_dir).glob("*.txt"):
+        with open(path) as f:
             timestamp = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
-            txt_file_timestamps.append(timestamp)
+            file_timestamps[str(path)] = timestamp
 
-    infodump_date = min(txt_file_timestamps)
+    (oldest_file, infodump_date) = min(file_timestamps.items(), key=lambda x: x[1])
+
+    print(f"Oldest file is {oldest_file}: {infodump_date}")
 
     df_users = pl.read_csv(
         source=os.path.join(infodump_dir, "usernames.txt"),
