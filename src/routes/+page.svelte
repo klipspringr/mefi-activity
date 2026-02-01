@@ -18,7 +18,7 @@
         type TPeriod,
         type TSite,
     } from "$lib/common"
-    import type { ChartDataset, TooltipItem } from "chart.js"
+    import type { ChartDataset, ChartTypeRegistry, TooltipItem } from "chart.js"
     import { fade } from "svelte/transition"
     import "../app.css"
     import * as json from "../data/data.json"
@@ -36,16 +36,16 @@
 
     const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
 
-    const tooltipUsersTotal = (ctx: TooltipItem<"bar">[]) =>
-        "Total: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
-
     const daysInMonth = (timestamp: number) => {
         const d = new Date(timestamp)
         return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() // zeroth day of next month = last day of this month
     }
 
-    const tooltipPerDay = (ctx: TooltipItem<"bar">[]) =>
-        "Per day: " + NUMBER_FORMAT.format(Math.round(ctx[0].parsed.y / daysInMonth(ctx[0].parsed.x)))
+    const tooltipUsersTotal = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
+        "Total: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
+
+    const tooltipPerDay = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
+        "Per day: " + NUMBER_FORMAT.format(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth((ctx[0].parsed.x ?? 0))))
 
     const padSeriesLeft = (site: TSite, series: number[], value: number): number[] =>
         Array(json["all"].posts.length - json[site].posts.length)
@@ -142,8 +142,7 @@
         </li>
     </ul>
     <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
-        <strong>Note (November 2025):</strong> the Infodump has recently had problems (e.g. missing recent months, delayed
-        publication). These have been reported to MeFi.
+        <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This has been reported to MeFi.
     </div>
     <h2>Users</h2>
     <ChartComponent
