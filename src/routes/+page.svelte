@@ -93,13 +93,15 @@
 
 <div class="mx-auto max-w-[1280px] pb-4 xl:border-x xl:border-mefi-paler">
     <header class="sticky top-0 z-20 mb-2 select-none">
-        <div class="flex h-10 items-center bg-mefi-blue text-white">
-            <h1 class="grow pl-4 text-lg xs:text-2xl">
-                <a href="/" class="tracking-wide !no-underline">
-                    <span class="font-semibold uppercase text-white">MetaFilter</span>
-                    <span class="font-extrabold text-mefi-green">Activity Stats</span>
+        <div class="flex h-10 items-center bg-mefi-blue text-white gap-x-2 sm:gap-x-4">
+            <h1 class="pl-4 text-lg xs:text-2xl">
+                <a href="/" class="tracking-wide !no-underline uppercase ">
+                    <span class="font-extrabold text-white">MeFi</span><span class="font-semibold text-mefi-green">St.at</span>
                 </a>
             </h1>
+            <div class="grow text-xs sm:text-sm text-mefi-pale">
+                MetaFilter activity stats
+            </div>
             <button
                 class="h-full pl-2 pr-4 hover:text-mefi-paler"
                 onclick={() => (showJumpMenu = !showJumpMenu)}
@@ -125,7 +127,7 @@
     </header>
 
     <h2 data-menu-ignore>Notes</h2>
-    <ul class="mb-4 ml-4 list-outside list-disc px-2 marker:text-mefi-blue sm:px-4">
+    <ul class="mb-4 ml-4 list-outside list-disc px-4 marker:text-mefi-blue">
         <li>
             Data from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published
             <strong>{json._published}</strong>. Updates appear here within 24 hours of publication.
@@ -141,7 +143,7 @@
             product.
         </li>
     </ul>
-    <div class="bg-rose-100 px-2 py-2 font-bold text-rose-600 sm:px-4">
+    <div class="bg-rose-100 px-4 py-2 font-bold text-rose-600">
         <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This has been reported to MeFi.
     </div>
     <h2>Users</h2>
