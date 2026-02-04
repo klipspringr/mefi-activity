@@ -19,6 +19,22 @@
         type TSite,
     } from "$lib/common"
     import type { ChartDataset, ChartTypeRegistry, TooltipItem } from "chart.js"
+    import {
+        BarController,
+        BarElement,
+        CategoryScale,
+        Chart,
+        Colors,
+        Legend,
+        LinearScale,
+        LineController,
+        LineElement,
+        PointElement,
+        TimeSeriesScale,
+        Tooltip,
+        type ActiveElement,
+        type Point,
+    } from "chart.js"
     import { fade } from "svelte/transition"
     import "../app.css"
     import * as json from "../data/data.json"
@@ -45,7 +61,7 @@
         "Total: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
 
     const tooltipPerDay = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
-        "Per day: " + NUMBER_FORMAT.format(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth((ctx[0].parsed.x ?? 0))))
+        "Per day: " + NUMBER_FORMAT.format(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth(ctx[0].parsed.x ?? 0)))
 
     const padSeriesLeft = (site: TSite, series: number[], value: number): number[] =>
         Array(json["all"].posts.length - json[site].posts.length)
@@ -54,10 +70,47 @@
 
     const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
 
-    let showJumpMenu = $state(false)
+    /* Chart.js configuration */
+    Chart.register(
+        BarController,
+        BarElement,
+        CategoryScale,
+        Colors,
+        Legend,
+        LinearScale,
+        LineController,
+        LineElement,
+        PointElement,
+        TimeSeriesScale,
+        Tooltip
+    )
 
+    Chart.defaults.animation = false
+    Chart.defaults.responsive = true
+    Chart.defaults.maintainAspectRatio = false
+
+    Chart.defaults.datasets.bar.barPercentage = 1
+    Chart.defaults.datasets.bar.categoryPercentage = 1
+    Chart.defaults.datasets.line.pointStyle = false
+
+    Chart.defaults.scales.linear.beginAtZero = true
+    Chart.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
+    Chart.defaults.scales.timeseries.ticks.callback = (v) => {
+        const d = new Date(v)
+        return d.getMonth() === 6 ? d.getFullYear() : undefined
+    }
+
+    Chart.defaults.plugins.legend.display = false
+    Chart.defaults.plugins.legend.position = "bottom"
+    Chart.defaults.plugins.legend.onClick = () => {}
+
+    Tooltip.positioners.cursor = (_: ActiveElement[], eventPos: Point) => eventPos
+    Chart.defaults.plugins.tooltip.position = "cursor"
+
+    /* Parsing and derived data */
     const START_YEAR = json["all"]._start_year
     const LATEST_MONTH_INDEX = json["all"]._start_month - 1 + json["all"].posts.length - 1
+    const LAST_COMPLETED_MONTH = new Date(START_YEAR, LATEST_MONTH_INDEX, 1)
 
     const TIMESERIES_MIN: Record<TPeriod, number> = {
         all: 0,
@@ -67,20 +120,22 @@
         last5y: new Date(START_YEAR, LATEST_MONTH_INDEX - 5 * 12 + 1, 1).getTime(),
         last2y: new Date(START_YEAR, LATEST_MONTH_INDEX - 2 * 12 + 1, 1).getTime(),
     }
+    const MONTH_LABELS_ALL = Array.from({ length: json["all"].posts.length }, (_, i) =>
+        new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
+    )
+
+    // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
+    const POSTS_ASK = padSeriesLeft("askme", json["askme"].posts, 0)
+    const POSTS_EXCLUDING_ASK = json["all"].posts.map((n, i) => n - POSTS_ASK[i])
+
+    /* UI and stores */
+    let showJumpMenu = $state(false)
 
     let timeSeriesMin = $derived(TIMESERIES_MIN[data.period])
 
     let activeUsers = $derived(json[data.site].users_monthly[0])
 
-    const MONTH_LABELS_ALL = Array.from({ length: json["all"].posts.length }, (_, i) =>
-        new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
-    )
-
     let monthLabelsSite = $derived(MONTH_LABELS_ALL.slice(json["all"].posts.length - json[data.site].posts.length))
-
-    // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
-    const POSTS_ASK = padSeriesLeft("askme", json["askme"].posts, 0)
-    const POSTS_EXCLUDING_ASK = json["all"].posts.map((n, i) => n - POSTS_ASK[i])
 </script>
 
 <svelte:head>
@@ -93,15 +148,14 @@
 
 <div class="mx-auto max-w-[1280px] pb-4 xl:border-x xl:border-mefi-paler">
     <header class="sticky top-0 z-20 mb-2 select-none">
-        <div class="flex h-10 items-center bg-mefi-blue text-white gap-x-2 sm:gap-x-4">
+        <div class="flex h-10 items-center gap-x-2 bg-mefi-blue text-white sm:gap-x-4">
             <h1 class="pl-4 text-lg xs:text-2xl">
-                <a href="/" class="tracking-wide !no-underline uppercase ">
-                    <span class="font-extrabold text-white">MeFi</span><span class="font-semibold text-mefi-green">St.at</span>
+                <a href="/" class="uppercase tracking-wide !no-underline">
+                    <span class="font-extrabold text-white">MeFi</span><span class="font-semibold text-mefi-green"
+                        >St.at</span>
                 </a>
             </h1>
-            <div class="grow text-xs sm:text-sm text-mefi-pale">
-                MetaFilter activity stats
-            </div>
+            <div class="grow text-xs text-mefi-pale sm:text-sm">MetaFilter activity stats</div>
             <button
                 class="h-full pl-2 pr-4 hover:text-mefi-paler"
                 onclick={() => (showJumpMenu = !showJumpMenu)}
@@ -133,8 +187,8 @@
             <strong>{json._published}</strong>. Updates appear here within 24 hours of publication.
         </li>
         <li>
-            Charts run to <strong>{MONTH_FORMAT.format(new Date(START_YEAR, LATEST_MONTH_INDEX, 1))}</strong>, the
-            latest completed month in the Infodump.
+            Charts run to <strong>{MONTH_FORMAT.format(LAST_COMPLETED_MONTH)}</strong>, the latest completed month in
+            the Infodump.
         </li>
         <li>
             Questions or comments? <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
@@ -144,7 +198,8 @@
         </li>
     </ul>
     <div class="bg-rose-100 px-4 py-2 font-bold text-rose-600">
-        <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This has been reported to MeFi.
+        <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This
+        has been reported to MeFi.
     </div>
     <h2>Users</h2>
     <ChartComponent

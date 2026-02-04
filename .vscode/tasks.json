@@ -9,6 +9,6 @@
                 "runOn": "folderOpen"
             },
             "problemMatcher": []
-        },
+        }
     ]
 }
