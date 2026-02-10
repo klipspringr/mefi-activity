@@ -155,7 +155,9 @@
                         >St.at</span>
                 </a>
             </h1>
-            <div class="grow text-xs text-mefi-pale sm:text-sm">MetaFilter activity stats</div>
+            <div class="grow translate-y-px text-sm/none font-medium tracking-wide text-mefi-paler sm:text-base/none">
+                MetaFilter activity stats
+            </div>
             <button
                 class="h-full pl-2 pr-4 hover:text-mefi-paler"
                 onclick={() => (showJumpMenu = !showJumpMenu)}

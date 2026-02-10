@@ -32,7 +32,7 @@ To remind myself how it works in future:
 - optionally, set `INFODUMP_USER_AGENT` environment variable to a string that identifies you (header is sent when downloading large Infodump files)
 
 - run `python -m infodump_tools.download --dev infodump src/data/data.json`
-    - this downloads Infodump files to the `infodump` directory and outputs stats to `src/data/data.json`. with the `-d|--dev` flag, we always regenerate the json, even if there is no new Infodump
+  - this downloads Infodump files to the `infodump` directory and outputs stats to `src/data/data.json`. with the `-d|--dev` flag, we always regenerate the json, even if there is no new Infodump
 
 ## Notebooks
 
