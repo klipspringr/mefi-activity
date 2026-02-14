@@ -6,10 +6,10 @@
         ACTIVITY_LEVELS,
         AGE_LABELS,
         COLORS,
-        COMPACT_FORMAT,
-        HOUR_FORMAT,
-        MONTH_FORMAT,
-        NUMBER_FORMAT,
+        compact,
+        hour,
+        large,
+        monthYear,
         PERCENT_OPTIONS,
         PERIODS,
         SITES,
@@ -50,7 +50,7 @@
 
     const hideJumpMenu = () => (showJumpMenu = false)
 
-    const tickCompact = (v: string | number) => (typeof v === "number" ? COMPACT_FORMAT.format(v) : v)
+    const tickCompact = (v: string | number) => (typeof v === "number" ? compact(v) : v)
 
     const daysInMonth = (timestamp: number) => {
         const d = new Date(timestamp)
@@ -58,10 +58,10 @@
     }
 
     const tooltipUsersTotal = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
-        "Total: " + NUMBER_FORMAT.format(activeUsers[ctx[0].dataIndex])
+        "Total users: " + large(usersSite[ctx[0].dataIndex])
 
     const tooltipPerDay = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
-        "Per day: " + NUMBER_FORMAT.format(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth(ctx[0].parsed.x ?? 0)))
+        "Per day: " + large(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth(ctx[0].parsed.x ?? 0)))
 
     const padSeriesLeft = (site: TSite, series: number[], value: number): number[] =>
         Array(json["all"].posts.length - json[site].posts.length)
@@ -95,6 +95,8 @@
 
     Chart.defaults.scales.linear.beginAtZero = true
     Chart.defaults.scales.timeseries.time.tooltipFormat = "MMMM yyyy"
+
+    // this is hacky, but the alternatives all have weird side effects
     Chart.defaults.scales.timeseries.ticks.callback = (v) => {
         const d = new Date(v)
         return d.getMonth() === 6 ? d.getFullYear() : undefined
@@ -108,34 +110,39 @@
     Chart.defaults.plugins.tooltip.position = "cursor"
 
     /* Parsing and derived data */
-    const START_YEAR = json["all"]._start_year
-    const LATEST_MONTH_INDEX = json["all"]._start_month - 1 + json["all"].posts.length - 1
-    const LAST_COMPLETED_MONTH = new Date(START_YEAR, LATEST_MONTH_INDEX, 1)
+    const startYear = json["all"]._start_year
+    const latestMonthIndex = json["all"]._start_month - 1 + json["all"].posts.length - 1
+    const latestCompletedMonth = new Date(startYear, latestMonthIndex, 1)
 
-    const TIMESERIES_MIN: Record<TPeriod, number> = {
+    const timeSeriesMinimums: Record<TPeriod, number> = {
         all: 0,
         since2010: new Date(2010, 0, 1).getTime(),
         since2020: new Date(2020, 0, 1).getTime(),
-        last10y: new Date(START_YEAR, LATEST_MONTH_INDEX - 10 * 12 + 1, 1).getTime(),
-        last5y: new Date(START_YEAR, LATEST_MONTH_INDEX - 5 * 12 + 1, 1).getTime(),
-        last2y: new Date(START_YEAR, LATEST_MONTH_INDEX - 2 * 12 + 1, 1).getTime(),
+        last10y: new Date(startYear, latestMonthIndex - 10 * 12 + 1, 1).getTime(),
+        last5y: new Date(startYear, latestMonthIndex - 5 * 12 + 1, 1).getTime(),
+        last2y: new Date(startYear, latestMonthIndex - 2 * 12 + 1, 1).getTime(),
     }
-    const MONTH_LABELS_ALL = Array.from({ length: json["all"].posts.length }, (_, i) =>
+
+    const monthLabelsAll = Array.from({ length: json["all"].posts.length }, (_, i) =>
         new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
     )
 
-    // calculate total posts excluding AskMe, for denominator on deleted posts percentage chart
-    const POSTS_ASK = padSeriesLeft("askme", json["askme"].posts, 0)
-    const POSTS_EXCLUDING_ASK = json["all"].posts.map((n, i) => n - POSTS_ASK[i])
+    // total posts excluding AskMe, for denominator on deleted posts percentage chart
+    const postsAsk = padSeriesLeft("askme", json["askme"].posts, 0)
+    const postsExcludingAsk = json["all"].posts.map((n, i) => n - postsAsk[i])
+
+    const totalPosts = json["all"].posts.reduce((t, c) => t + c, 0)
+    const totalComments = json["all"].comments.reduce((t, c) => t + c, 0)
+    const totalUsers = json["all"].users_registered[json["all"].users_registered.length - 1]
 
     /* UI and stores */
     let showJumpMenu = $state(false)
 
-    let timeSeriesMin = $derived(TIMESERIES_MIN[data.period])
+    let timeSeriesMin = $derived(timeSeriesMinimums[data.period])
 
-    let activeUsers = $derived(json[data.site].users_monthly[0])
+    let monthLabelsSite = $derived(monthLabelsAll.slice(json["all"].posts.length - json[data.site].posts.length))
 
-    let monthLabelsSite = $derived(MONTH_LABELS_ALL.slice(json["all"].posts.length - json[data.site].posts.length))
+    let usersSite = $derived(json[data.site].users_monthly[0])
 </script>
 
 <svelte:head>
@@ -146,7 +153,7 @@
     <link rel="canonical" href="https://mefist.at/" />
 </svelte:head>
 
-<div class="mx-auto max-w-[1280px] pb-4 xl:border-x xl:border-mefi-paler">
+<div class="mx-auto max-w-screen-xl pb-4 xl:border-x xl:border-mefi-paler">
     <header class="sticky top-0 z-20 mb-2 select-none">
         <div class="flex h-10 items-center gap-x-2 bg-mefi-blue text-white sm:gap-x-4">
             <h1 class="pl-4 text-lg xs:text-2xl">
@@ -189,8 +196,12 @@
             <strong>{json._published}</strong>. Updates appear here within 24 hours of publication.
         </li>
         <li>
-            Charts run to <strong>{MONTH_FORMAT.format(LAST_COMPLETED_MONTH)}</strong>, the latest completed month in
-            the Infodump.
+            Charts run to <strong>{monthYear(latestCompletedMonth)}</strong>, the latest completed month in the
+            Infodump.
+        </li>
+        <li>
+            <strong>{large(totalUsers)}</strong> registered users, <strong>{large(totalPosts)}</strong> posts,
+            <strong>{large(totalComments)}</strong> comments.
         </li>
         <li>
             Questions or comments? <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
@@ -199,10 +210,12 @@
             product.
         </li>
     </ul>
-    <div class="bg-rose-100 px-4 py-2 font-bold text-rose-600">
+
+    <div class="bg-rose-100 px-4 py-2 text-sm font-bold text-rose-600 sm:text-base">
         <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This
         has been reported to MeFi.
     </div>
+
     <h2>Users</h2>
     <ChartComponent
         title="Users who posted or commented"
@@ -231,7 +244,7 @@
             labels: monthLabelsSite,
             datasets: json[data.site].users_monthly_by_joined.map((counts, i) => ({
                 label: "Joined in " + (json._start_joinyear + i),
-                data: counts.map((v, j) => v / activeUsers[j]),
+                data: counts.map((v, j) => v / usersSite[j]),
                 backgroundColor: color(i),
             })),
         }}
@@ -317,7 +330,7 @@
         titleForAnchor="Cumulative registered and active users"
         type="line"
         data={{
-            labels: MONTH_LABELS_ALL,
+            labels: monthLabelsAll,
             datasets: [
                 ...SITES_KEYS.map(
                     (site): ChartDataset => ({
@@ -468,7 +481,7 @@
             datasets: [
                 {
                     label: "Posts per user",
-                    data: json[data.site].posts.map((v, i) => v / activeUsers[i]),
+                    data: json[data.site].posts.map((v, i) => v / usersSite[i]),
                     borderColor: COLORS.posts,
                 },
             ],
@@ -488,7 +501,7 @@
             datasets: [
                 {
                     label: "Comments per user",
-                    data: json[data.site].comments.map((v, i) => v / activeUsers[i]),
+                    data: json[data.site].comments.map((v, i) => v / usersSite[i]),
                     borderColor: COLORS.comments,
                 },
             ],
@@ -523,7 +536,7 @@
                 {
                     label: "Percentage of posts deleted",
                     data: json[data.site].posts_deleted.map(
-                        (v, i) => v / (data.site === "all" ? POSTS_EXCLUDING_ASK : json[data.site].posts)[i]
+                        (v, i) => v / (data.site === "all" ? postsExcludingAsk : json[data.site].posts)[i]
                     ),
                     backgroundColor: COLORS.deleted,
                 },
@@ -538,10 +551,10 @@
                 tooltip: {
                     callbacks: {
                         afterTitle: ([{ dataIndex }]) => [
-                            "Deleted: " + NUMBER_FORMAT.format(json[data.site].posts_deleted[dataIndex]),
+                            "Deleted: " + large(json[data.site].posts_deleted[dataIndex]),
                             data.site === "all"
-                                ? "Total (ex AskMe): " + NUMBER_FORMAT.format(POSTS_EXCLUDING_ASK[dataIndex])
-                                : "Total: " + NUMBER_FORMAT.format(json[data.site].posts[dataIndex]),
+                                ? "Total (ex AskMe): " + large(postsExcludingAsk[dataIndex])
+                                : "Total: " + large(json[data.site].posts[dataIndex]),
                         ],
                     },
                 },
@@ -581,7 +594,7 @@
         title="Posts and comments by hour"
         type="bar"
         data={{
-            labels: Array.from({ length: 24 }, (_, i) => HOUR_FORMAT.format(i * 60 * 60 * 1000)),
+            labels: Array.from({ length: 24 }, (_, i) => hour(i * 60 * 60 * 1000)),
             datasets: [
                 {
                     label: "Posts",

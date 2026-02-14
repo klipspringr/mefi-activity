@@ -22,9 +22,9 @@ export type TPeriod = keyof typeof PERIODS
 export const isPeriod = (value: string): value is TPeriod => value in PERIODS
 
 // need to keep these consistent with config.py
-export const ACTIVITY_LEVELS = [1, 5, 10, 25, 50]
-export const AGE_LABELS = ["<1 year", "1-5 years", "5-10 years", "10-15 years", "15+ years"]
-export const TOP_N = [0.01, 0.05, 0.1]
+export const ACTIVITY_LEVELS = [1, 5, 10, 25, 50] as const
+export const AGE_LABELS = ["<1 year", "1-5 years", "5-10 years", "10-15 years", "15+ years"] as const
+export const TOP_N = [0.01, 0.05, 0.1] as const
 
 export const COLORS = {
     white: "rgb(255, 255, 255)",
@@ -50,15 +50,22 @@ export const COLORS = {
         "rgb(75, 192, 192)",
         "rgb(201, 203, 207)",
     ],
-}
+} as const
 
-export const NUMBER_FORMAT = Intl.NumberFormat(undefined, { useGrouping: true })
-export const COMPACT_FORMAT = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
-export const HOUR_FORMAT = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
-export const MONTH_FORMAT = Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" })
+const largeFormatter = Intl.NumberFormat(undefined, { useGrouping: true })
+export const large = (n: number) => largeFormatter.format(n)
 
-export const PERCENT_OPTIONS = {
+const compactFormatter = Intl.NumberFormat(undefined, { notation: "compact", compactDisplay: "short" })
+export const compact = (n: number) => compactFormatter.format(n)
+
+const hourFormatter = Intl.DateTimeFormat(undefined, { hour12: true, hour: "numeric", timeZone: "UTC" })
+export const hour = (n: Date | number) => hourFormatter.format(n)
+
+const monthYearFormatter = Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" })
+export const monthYear = (n: Date | number) => monthYearFormatter.format(n)
+
+export const PERCENT_OPTIONS: Intl.NumberFormatOptions = {
     style: "percent",
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
-} as Intl.NumberFormatOptions
+} as const
