@@ -5,16 +5,15 @@ import re
 import shutil
 import tempfile
 from datetime import datetime
-from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 from infodump_tools.calculate import calculate_stats
 from infodump_tools.config import (
     INFODUMP_BASE_URL,
+    INFODUMP_FILENAMES,
     INFODUMP_HOMEPAGE,
     KEY_TIMESTAMP,
-    SITES,
 )
 
 
@@ -28,7 +27,6 @@ def get_publication_timestamp():
 
 def download_zip(filename, infodump_dir, user_agent):
     url = INFODUMP_BASE_URL + filename + ".txt.zip"
-    print(f"Download and extract {url}")
 
     req = Request(url)
     if user_agent is not None:
@@ -51,41 +49,34 @@ def download_zip(filename, infodump_dir, user_agent):
 
 
 def download_infodump(dev, infodump_dir, output_path, user_agent):
-    download_required = True
-    publication_timestamp = get_publication_timestamp()
+    download_needed = True
 
-    if os.path.exists(output_path):
+    publication_timestamp = get_publication_timestamp()
+    print(f'Infodump last published "{publication_timestamp}"')
+
+    if os.path.isfile(output_path):
         with open(output_path, "r") as f:
             last_json = json.load(f)
             if (
                 KEY_TIMESTAMP in last_json
                 and last_json[KEY_TIMESTAMP] == publication_timestamp
             ):
-                print(f"No new Infodump (latest is {publication_timestamp})")
-                download_required = False
+                print("Infodump already processed")
+                download_needed = False
 
-    # download infodump if it is fresh, or if we are in dev mode and have not downloaded it already
-    infodump_path = Path(infodump_dir)
-    if download_required or (
-        dev and not (infodump_path / "commentdata_mefi.txt").exists()
-    ):
-        print(f"Download Infodump (published {publication_timestamp})")
+    if not (download_needed or dev):
+        print("Nothing to do")
+        return
 
-        if infodump_path.exists():
-            print(f'Delete "{infodump_dir}/*.txt"')
-            for txt in infodump_path.glob("*.txt"):
-                txt.unlink()
-        else:
-            infodump_path.mkdir()
+    os.makedirs(infodump_dir, exist_ok=True)
 
-        download_zip("usernames", infodump_dir, user_agent)
-        for site in SITES:
-            download_zip(f"postdata_{site}", infodump_dir, user_agent)
-            download_zip(f"commentdata_{site}", infodump_dir, user_agent)
+    for filename in INFODUMP_FILENAMES:
+        if download_needed or not os.path.isfile(f"{infodump_dir}/{filename}.txt"):
+            print(f'Download and extract "{filename}"...')
+            download_zip(filename, infodump_dir, user_agent)
 
-    if download_required or dev:
-        print(f'Reading files from "{infodump_dir}", writing stats to "{output_path}"')
-        calculate_stats(infodump_dir, output_path, publication_timestamp)
+    print(f'Reading files from "{infodump_dir}", writing stats to "{output_path}"')
+    calculate_stats(infodump_dir, output_path, publication_timestamp)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,12 @@ SITES = ["mefi", "askme", "meta", "fanfare", "music"]
 INFODUMP_HOMEPAGE = "https://stuff.metafilter.com/infodump/"
 INFODUMP_BASE_URL = "https://mefi.us/infodump/"
 
+INFODUMP_FILENAMES = (
+    ["usernames"]
+    + [f"postdata_{site}" for site in SITES]
+    + [f"commentdata_{site}" for site in SITES]
+)
+
 KEY_TIMESTAMP = "_published"
 
 # need to keep js consistent with these

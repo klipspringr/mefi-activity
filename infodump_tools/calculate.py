@@ -33,7 +33,7 @@ def extract_month(col_name):
 # load infodump txt files into polars dataframes
 def load_dfs(
     infodump_dir,
-) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
+) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame]:
     # sometimes the infodump contains text files which were exported at different times
     # set infodump_date to the earliest timestamp
     file_timestamps = dict()
@@ -71,9 +71,11 @@ def load_dfs(
                 schema_overrides={
                     "userid": UInt32,
                     "category": UInt8,
+                    "favorites": UInt32,
                     "deleted": UInt8,
                 },
             )
+            .rename({"favorites": "faves"})  # consistent columm names
             .with_columns(
                 date_parser("datestamp"),
                 site=lit(site, Enum(SITES)),
@@ -92,8 +94,11 @@ def load_dfs(
                 skip_rows=1,
                 schema_overrides={
                     "userid": UInt32,
+                    "faves": UInt32,
+                    "best answer?": UInt8,
                 },
             )
+            .rename({"best answer?": "best"})
             .with_columns(
                 date_parser("datestamp"),
                 site=lit(site, Enum(SITES)),
@@ -148,31 +153,6 @@ def load_dfs(
         joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
     )
 
-    df_months_all = DataFrame(
-        {
-            "month": pl.date_range(
-                df_activity_all.head(1).get_column("month")[0],
-                df_activity_all.tail(1).get_column("month")[0],
-                interval="1mo",
-                eager=True,
-            )
-        }
-    )
-
-    # get registered users for whole site
-    df_users_registered = (
-        df_months_all.join(
-            df_users.select("userid", "joinmonth"),
-            left_on="month",
-            right_on="joinmonth",
-            how="left",
-            coalesce=True,
-        )
-        .group_by("month")
-        .agg(col("userid").count())
-        .select(col("userid").cum_sum().alias("sum"))
-    )
-
     joinyears = list(
         range(
             df_users.get_column("joinyear").min(),
@@ -180,30 +160,34 @@ def load_dfs(
         )
     )
 
+    print("Loaded files into dataframes")
+
     return (
         joinyears,
         df_users,
-        df_users_registered,
         df_posts_all,
         df_comments_all,
         df_activity_all,
     )
 
 
-def filter_by_site(site, df: DataFrame) -> DataFrame:
+def filter_df_by_site(site, df: DataFrame) -> DataFrame:
     return df if site == "all" else df.filter(col("site") == site)
 
 
-# construct posts and comments dataframes for the given site
-def get_site_dfs(
-    site,
+def calculate_for_site(
+    site: str,
+    joinyears: list[int],
+    df_users: DataFrame,
     df_posts_all: DataFrame,
     df_comments_all: DataFrame,
     df_activity_all: DataFrame,
-) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
-    df_posts = filter_by_site(site, df_posts_all)
-    df_comments = filter_by_site(site, df_comments_all)
-    df_activity = filter_by_site(site, df_activity_all)
+):
+    print(f'Calculating stats for "{site}"')
+
+    df_posts = filter_df_by_site(site, df_posts_all)
+    df_comments = filter_df_by_site(site, df_comments_all)
+    df_activity = filter_df_by_site(site, df_activity_all)
 
     # range of months from min to max
     # use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity
@@ -218,15 +202,193 @@ def get_site_dfs(
         }
     )
 
-    return df_months, df_posts, df_comments, df_activity
+    start_date = df_months.head(1).get_column("month")[0]
+    out = {
+        "_start_year": start_date.year,
+        "_start_month": start_date.month,
+    }
+
+    df_users_monthly = (
+        df_months.join(
+            df_activity.select("userid", "month"),
+            on="month",
+            how="left",
+            coalesce=True,
+        )
+        .group_by(["month", "userid"], maintain_order=True)
+        .agg(count=col("userid").count())
+    )
+
+    df_users_monthly_activity = df_users_monthly.group_by("month").agg(
+        (
+            col("count").filter(col("count") >= level).count().alias(str(level))
+            for level in ACTIVITY_LEVELS
+        )
+    )
+
+    out["users_monthly"] = [
+        c.to_list() for c in df_users_monthly_activity.drop("month").get_columns()
+    ]
+
+    df_users_monthly_by_joined = (
+        df_users_monthly.join(
+            df_users.select("userid", "joinyear"),
+            on="userid",
+            how="left",
+            coalesce=True,
+        )
+        .group_by("month")
+        .agg(
+            (
+                col("joinyear").filter(joinyear=year).count().alias(str(year))
+                for year in joinyears
+            ),
+        )
+        .drop("month")
+    )
+
+    out["users_monthly_by_joined"] = [
+        c.to_list() for c in df_users_monthly_by_joined.get_columns()
+    ]
+
+    df_activity_by_age = (
+        df_months.join(
+            df_activity.select("userid", "datestamp", "month"),
+            on="month",
+            how="left",
+            coalesce=True,
+        )
+        .join(
+            df_users.select("userid", "joindate"),
+            on="userid",
+            how="left",
+            coalesce=True,
+        )
+        .with_columns(age=(col("datestamp") - col("joindate")).dt.total_days())
+        .with_columns(
+            col("age")
+            .is_between(AGE_THRESHOLDS[i], AGE_THRESHOLDS[i + 1], closed="left")
+            .alias(str(i))
+            for i in range(len(AGE_THRESHOLDS) - 1)
+        )
+        .group_by("month")
+        .agg(col(str(i)).sum() for i in range(len(AGE_THRESHOLDS) - 1))
+        .drop("month")
+    )
+
+    out["activity_by_age"] = [c.to_list() for c in df_activity_by_age.get_columns()]
+
+    df_users_first = (
+        df_months.join(
+            df_activity.select("userid", "month").unique("userid", keep="first"),
+            on="month",
+            how="left",
+        )
+        .group_by("month")
+        .agg(first=col("userid").len())
+    )
+
+    out["users_first"] = df_users_first.get_column("first").to_list()
+
+    df_users_last = (
+        df_months.join(
+            df_activity.select("userid", "month").unique("userid", keep="last"),
+            on="month",
+            how="left",
+        )
+        .group_by("month")
+        .agg(last=col("userid").len())
+    )
+
+    out["users_last"] = df_users_last.get_column("last").to_list()
+
+    df_users_cum = df_users_first.select("month", cum=col("first").cum_sum())
+
+    out["users_cum"] = df_users_cum.get_column("cum").to_list()
+
+    # get registered users for whole site
+    if site == "all":
+        df_users_registered = (
+            df_months.join(
+                df_users.select("userid", "joinmonth"),
+                left_on="month",
+                right_on="joinmonth",
+                how="left",
+                coalesce=True,
+            )
+            .group_by("month")
+            .agg(col("userid").count())
+            .select(col("userid").cum_sum().alias("sum"))
+        )
+
+        out["users_registered"] = df_users_registered.get_column("sum").to_list()
+
+    df_posts_deleted = (
+        df_months.join(
+            df_posts.select("month", "deleted"),
+            on="month",
+            how="left",
+            coalesce=True,
+        )
+        .group_by("month")
+        .agg(
+            col("deleted").filter(col("deleted").is_in([1, 3])).len()
+        )  # 1: deleted, 3: deleted and closed on Metatalk
+    )
+
+    out["posts_deleted"] = df_posts_deleted.get_column("deleted").to_list()
+
+    for kind, df in [("posts", df_posts), ("comments", df_comments)]:
+        df_totals = (
+            df_months.join(df, on="month", how="left", coalesce=True)
+            .group_by("month")
+            .agg(pl.len(), pl.sum("faves"))
+        )
+
+        out[kind] = df_totals.get_column("len").to_list()
+
+        for label, format in [("weekdays", "%u"), ("hours", "%H")]:
+            out[f"{kind}_{label}_percent"] = (
+                df.select("datestamp")
+                .group_by(col("datestamp").dt.to_string(format).alias(label))
+                .len()
+                .sort(by=label)
+                .select((col("len") / pl.sum("len")).round(4).alias("percent"))
+                .get_column("percent")
+                .to_list()
+            )
+
+        df_activity_by_top_users = (
+            df_months.join(
+                df.select("month", "userid"), on="month", how="left", coalesce=True
+            )
+            .group_by("month")
+            .agg(
+                pl.len(),
+                col("userid").unique_counts().alias("counts").sort(descending=True),
+            )
+            .select(
+                (
+                    col("counts").list.head(col("counts").list.len() * n).list.sum()
+                    / col("len")
+                ).alias(str(n))
+                for n in TOP_N
+            )
+            .select(pl.all().round(3))
+        )
+
+        out[f"{kind}_top_users"] = [
+            c.to_list() for c in df_activity_by_top_users.get_columns()
+        ]
+
+    return out
 
 
-# crunch infodump data into a json stats file
+# crunch infodump data into json
 def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
     (
         joinyears,
         df_users,
-        df_users_registered,
         df_posts_all,
         df_comments_all,
         df_activity_all,
@@ -237,192 +399,15 @@ def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
         "_start_joinyear": joinyears[0],
     }
 
-    for site in SITES + ["all"]:
-        print(f'Calculating stats for "{site}"')
-
-        df_months, df_posts, df_comments, df_activity = get_site_dfs(
-            site, df_posts_all, df_comments_all, df_activity_all
+    for site in ["all"] + SITES:
+        out[site] = calculate_for_site(
+            site,
+            joinyears,
+            df_users,
+            df_posts_all,
+            df_comments_all,
+            df_activity_all,
         )
-
-        start_date = df_months.head(1).get_column("month")[0]
-        out[site] = {
-            "_start_year": start_date.year,
-            "_start_month": start_date.month,
-        }
-
-        if site == "all":
-            out[site]["users_registered"] = df_users_registered.get_column(
-                "sum"
-            ).to_list()
-
-        df_users_monthly = (
-            df_months.join(
-                df_activity.select("userid", "month"),
-                on="month",
-                how="left",
-                coalesce=True,
-            )
-            .group_by(["month", "userid"], maintain_order=True)
-            .agg(count=col("userid").count())
-        )
-
-        df_users_monthly_activity = df_users_monthly.group_by("month").agg(
-            (
-                col("count").filter(col("count") >= level).count().alias(str(level))
-                for level in ACTIVITY_LEVELS
-            )
-        )
-
-        out[site]["users_monthly"] = [
-            c.to_list() for c in df_users_monthly_activity.drop("month").get_columns()
-        ]
-
-        df_users_monthly_by_joined = (
-            df_users_monthly.join(
-                df_users.select("userid", "joinyear"),
-                on="userid",
-                how="left",
-                coalesce=True,
-            )
-            .group_by("month")
-            .agg(
-                (
-                    col("joinyear").filter(joinyear=year).count().alias(str(year))
-                    for year in joinyears
-                ),
-            )
-            .drop("month")
-        )
-
-        out[site]["users_monthly_by_joined"] = [
-            c.to_list() for c in df_users_monthly_by_joined.get_columns()
-        ]
-
-        df_activity_by_age = (
-            df_months.join(
-                df_activity.select("userid", "datestamp", "month"),
-                on="month",
-                how="left",
-                coalesce=True,
-            )
-            .join(
-                df_users.select("userid", "joindate"),
-                on="userid",
-                how="left",
-                coalesce=True,
-            )
-            .with_columns(age=(col("datestamp") - col("joindate")).dt.total_days())
-            .with_columns(
-                col("age")
-                .is_between(AGE_THRESHOLDS[i], AGE_THRESHOLDS[i + 1], closed="left")
-                .alias(str(i))
-                for i in range(len(AGE_THRESHOLDS) - 1)
-            )
-            .group_by("month")
-            .agg(col(str(i)).sum() for i in range(len(AGE_THRESHOLDS) - 1))
-            .drop("month")
-        )
-
-        out[site]["activity_by_age"] = [
-            c.to_list() for c in df_activity_by_age.get_columns()
-        ]
-
-        df_users_first = (
-            df_months.join(
-                df_activity.select("userid", "month").unique("userid", keep="first"),
-                on="month",
-                how="left",
-            )
-            .group_by("month")
-            .agg(first=col("userid").len())
-        )
-
-        out[site]["users_first"] = df_users_first.get_column("first").to_list()
-
-        df_users_last = (
-            df_months.join(
-                df_activity.select("userid", "month").unique("userid", keep="last"),
-                on="month",
-                how="left",
-            )
-            .group_by("month")
-            .agg(last=col("userid").len())
-        )
-
-        out[site]["users_last"] = df_users_last.get_column("last").to_list()
-
-        df_users_cum = df_users_first.select("month", cum=col("first").cum_sum())
-
-        out[site]["users_cum"] = df_users_cum.get_column("cum").to_list()
-
-        df_posts_deleted = (
-            df_months.join(
-                df_posts.select("month", "deleted"),
-                on="month",
-                how="left",
-                coalesce=True,
-            )
-            .group_by("month")
-            .agg(
-                col("deleted").filter(col("deleted").is_in([1, 3])).len()
-            )  # 1: deleted, 3: deleted and closed on Metatalk
-        )
-
-        out[site]["posts_deleted"] = df_posts_deleted.get_column("deleted").to_list()
-
-        for kind, df in {"posts": df_posts, "comments": df_comments}.items():
-            out[site][kind] = (
-                df_months.join(
-                    df.select("month"), on="month", how="left", coalesce=True
-                )
-                .group_by("month")
-                .agg(pl.len())
-                .get_column("len")
-                .to_list()
-            )
-
-            out[site][f"{kind}_weekdays_percent"] = (
-                df.select("datestamp")
-                .group_by(col("datestamp").dt.weekday().alias("weekday"))
-                .len()
-                .sort(by="weekday")
-                .select((col("len") / pl.sum("len")).round(4).alias("percent"))
-                .get_column("percent")
-                .to_list()
-            )
-
-            out[site][f"{kind}_hours_percent"] = (
-                df.select("datestamp")
-                .group_by(col("datestamp").dt.hour().alias("hour"))
-                .len()
-                .sort(by="hour")
-                .select((col("len") / pl.sum("len")).round(4).alias("percent"))
-                .get_column("percent")
-                .to_list()
-            )
-
-            df_activity_by_top_users = (
-                df_months.join(
-                    df.select("month", "userid"), on="month", how="left", coalesce=True
-                )
-                .group_by("month")
-                .agg(
-                    pl.len(),
-                    col("userid").unique_counts().alias("counts").sort(descending=True),
-                )
-                .select(
-                    (
-                        col("counts").list.head(col("counts").list.len() * n).list.sum()
-                        / col("len")
-                    ).alias(str(n))
-                    for n in TOP_N
-                )
-                .select(pl.all().round(3))
-            )
-
-            out[site][f"{kind}_top_users"] = [
-                c.to_list() for c in df_activity_by_top_users.get_columns()
-            ]
 
     with open(output_path, "w") as w:
         json.dump(out, w, sort_keys=True, indent=4)
