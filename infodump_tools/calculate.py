@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import date, datetime
 import pathlib
@@ -45,7 +44,9 @@ def load_dfs(
 
     (oldest_file, infodump_date) = min(file_timestamps.items(), key=lambda x: x[1])
 
-    print(f"Oldest file is {oldest_file}: {infodump_date}")
+    print(f'Oldest file is "{oldest_file}": {infodump_date}')
+
+    print("Load files into dataframes")
 
     df_users = pl.read_csv(
         source=os.path.join(infodump_dir, "usernames.txt"),
@@ -160,8 +161,6 @@ def load_dfs(
         )
     )
 
-    print("Loaded files into dataframes")
-
     return (
         joinyears,
         df_users,
@@ -182,8 +181,8 @@ def calculate_for_site(
     df_posts_all: DataFrame,
     df_comments_all: DataFrame,
     df_activity_all: DataFrame,
-):
-    print(f'Calculating stats for "{site}"')
+) -> dict:
+    print(f'Calculate stats for "{site}"')
 
     df_posts = filter_df_by_site(site, df_posts_all)
     df_comments = filter_df_by_site(site, df_comments_all)
@@ -385,7 +384,7 @@ def calculate_for_site(
 
 
 # crunch infodump data into json
-def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
+def calculate_stats(infodump_dir, publication_timestamp=None) -> dict:
     (
         joinyears,
         df_users,
@@ -409,7 +408,4 @@ def calculate_stats(infodump_dir, output_path, publication_timestamp=None):
             df_activity_all,
         )
 
-    with open(output_path, "w") as w:
-        json.dump(out, w, sort_keys=True, indent=4)
-
-    print(f'Wrote JSON to "{output_path}"')
+    return out

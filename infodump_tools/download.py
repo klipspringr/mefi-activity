@@ -83,10 +83,14 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
             print(f'Download and extract "{filename}"...')
             download_zip(filename, infodump_dir, user_agent)
 
-    print(f'Reading files from "{infodump_dir}", writing stats to "{output_path}"')
-    calculate_stats(infodump_dir, output_path, publication_timestamp)
+    print(f'Read files from "{infodump_dir}" and calculate stats...')
+    out = calculate_stats(infodump_dir, publication_timestamp)
 
-    print(f'Formatting "{output_path}" with Prettier')
+    print(f'Write JSON to "{output_path}"')
+    with open(output_path, "w") as w:
+        json.dump(out, w, sort_keys=True)
+
+    print("Format with Prettier")
     format_json(output_path)
 
 
