@@ -44,16 +44,10 @@ jobs:
                   node-version: 22
                   cache: "pnpm"
 
-            - name: Install dependencies
-              run: pnpm install
-
             - name: Check for Infodump updates
               env:
                   INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
               run: python -m infodump_tools.download infodump src/data/data.json
-
-            - name: Format JSON
-              run: pnpm prettier --write src/data/data.json
 
             - name: Push any update
               run: |

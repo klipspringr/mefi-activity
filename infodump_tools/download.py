@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 from datetime import datetime
 from urllib.request import Request, urlopen
@@ -48,6 +49,13 @@ def download_zip(filename, infodump_dir, user_agent):
         os.remove(tmp_path)
 
 
+def format_json(output_path):
+    # should keep the version consistent with package.json
+    args = ["pnpx", "prettier@3.8.1", "--write", output_path]
+    print(*args)
+    subprocess.run(args, check=True)
+
+
 def download_infodump(dev, infodump_dir, output_path, user_agent):
     download_needed = True
 
@@ -77,6 +85,9 @@ def download_infodump(dev, infodump_dir, output_path, user_agent):
 
     print(f'Reading files from "{infodump_dir}", writing stats to "{output_path}"')
     calculate_stats(infodump_dir, output_path, publication_timestamp)
+
+    print(f'Formatting "{output_path}" with Prettier')
+    format_json(output_path)
 
 
 if __name__ == "__main__":
