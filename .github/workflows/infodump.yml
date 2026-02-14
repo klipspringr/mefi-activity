@@ -47,6 +47,7 @@ jobs:
             - name: Check for Infodump updates
               env:
                   INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
+                  PYTHONUNBUFFERED: 1
               run: python -m infodump_tools.download infodump src/data/data.json
 
             - name: Push any update
