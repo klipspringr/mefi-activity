@@ -20,6 +20,12 @@
             "options": {
                 "parser": "svelte"
             }
+        },
+        {
+            "files": "src/data/data.json",
+            "options": {
+                "plugins": []
+            }
         }
     ]
 }
