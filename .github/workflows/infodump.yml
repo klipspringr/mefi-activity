@@ -35,10 +35,25 @@ jobs:
             - name: Install pip requirements
               run: pip install -r infodump_tools/requirements.txt
 
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Install Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install
+
             - name: Check for Infodump updates
               env:
                   INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
               run: python -m infodump_tools.download infodump src/data/data.json
+
+            - name: Format JSON
+              run: pnpm prettier --write src/data/data.json
 
             - name: Push any update
               run: |
