@@ -1,0 +1,18 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = gh_klipspringr:klipspringr/mefi-activity
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+	vscode-merge-base = origin/main
+[filter "nbstripout"]
+	clean = \"notebooks/.env-notebook/bin/python3\" -m nbstripout
+	smudge = cat
+	required = true
+[diff "ipynb"]
+	textconv = \"notebooks/.env-notebook/bin/python3\" -m nbstripout -t
