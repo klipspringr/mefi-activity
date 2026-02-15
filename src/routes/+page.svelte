@@ -110,17 +110,17 @@
     Chart.defaults.plugins.tooltip.position = "cursor"
 
     /* Parsing and derived data */
-    const startYear = json["all"]._start_year
+    const firstMonth = new Date(json["all"]._start_year, json["all"]._start_month - 1, 1)
     const latestMonthIndex = json["all"]._start_month - 1 + json["all"].posts.length - 1
-    const latestCompletedMonth = new Date(startYear, latestMonthIndex, 1)
+    const latestCompletedMonth = new Date(json["all"]._start_year, latestMonthIndex, 1)
 
     const timeSeriesMinimums: Record<TPeriod, number> = {
         all: 0,
         since2010: new Date(2010, 0, 1).getTime(),
         since2020: new Date(2020, 0, 1).getTime(),
-        last10y: new Date(startYear, latestMonthIndex - 10 * 12 + 1, 1).getTime(),
-        last5y: new Date(startYear, latestMonthIndex - 5 * 12 + 1, 1).getTime(),
-        last2y: new Date(startYear, latestMonthIndex - 2 * 12 + 1, 1).getTime(),
+        last10y: new Date(json["all"]._start_year, latestMonthIndex - 10 * 12 + 1, 1).getTime(),
+        last5y: new Date(json["all"]._start_year, latestMonthIndex - 5 * 12 + 1, 1).getTime(),
+        last2y: new Date(json["all"]._start_year, latestMonthIndex - 2 * 12 + 1, 1).getTime(),
     }
 
     const monthLabelsAll = Array.from({ length: json["all"].posts.length }, (_, i) =>
@@ -193,14 +193,15 @@
     <ul class="mb-4 ml-4 list-outside list-disc px-4 marker:text-mefi-blue">
         <li>
             Data from the <a href="https://stuff.metafilter.com/infodump/">MetaFilter Infodump</a> published
-            <strong>{json._published}</strong>. Updates appear here within 24 hours of publication.
+            <strong>{json._published}</strong>. Infodump updates appear here within 24 hours.
         </li>
         <li>
-            Charts run to <strong>{monthYear(latestCompletedMonth)}</strong>, the latest completed month in the
-            Infodump.
+            Data runs from <strong>{monthYear(firstMonth)}</strong> to
+            <strong>{monthYear(latestCompletedMonth)}</strong> (the most recent full month in the Infodump).
         </li>
         <li>
-            <strong>{large(totalUsers)}</strong> registered users, <strong>{large(totalPosts)}</strong> posts,
+            <strong>{large(totalUsers)}</strong> registered users,
+            <strong>{large(totalPosts)}</strong> posts,
             <strong>{large(totalComments)}</strong> comments.
         </li>
         <li>
@@ -211,10 +212,9 @@
         </li>
     </ul>
 
-    <div class="bg-rose-100 px-4 py-2 text-sm font-bold text-rose-600 sm:text-base">
-        <strong>1 February 2026 update:</strong> since November, the Infodump has missed all data later than April 2025. This
-        has been reported to MeFi.
-    </div>
+    <!-- <div class="bg-rose-100 px-4 py-2 text-sm font-bold text-rose-600 sm:text-base">
+        <strong>[DATESTAMP]</strong> [NOTICE]
+    </div> -->
 
     <h2>Users</h2>
     <ChartComponent
