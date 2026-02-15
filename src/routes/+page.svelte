@@ -386,7 +386,7 @@
             plugins: { legend: { display: true } },
         }}
         tall>
-        Age of user account at time of posting or commenting.
+        Age in years of user account at time of posting or commenting.
     </ChartComponent>
     <ChartComponent
         title="Posts by most active posters"

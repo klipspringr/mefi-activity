@@ -266,7 +266,11 @@ def calculate_for_site(
         .with_columns(age=(col("datestamp") - col("joindate")).dt.total_days())
         .with_columns(
             col("age")
-            .is_between(AGE_THRESHOLDS[i], AGE_THRESHOLDS[i + 1], closed="left")
+            .is_between(
+                AGE_THRESHOLDS[i] * 365.25,
+                AGE_THRESHOLDS[i + 1] * 365.25,
+                closed="left",
+            )
             .alias(str(i))
             for i in range(len(AGE_THRESHOLDS) - 1)
         )

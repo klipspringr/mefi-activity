@@ -15,10 +15,11 @@ KEY_TIMESTAMP = "_published"
 ACTIVITY_LEVELS = [1, 5, 10, 25, 50]
 AGE_THRESHOLDS = [
     0,
-    365,
-    365 * 5,
-    365 * 10,
-    365 * 15,
-    365 * 100,
+    1,
+    5,
+    10,
+    15,
+    20,
+    100,  # catch-all
 ]
 TOP_N = [0.01, 0.05, 0.1]
