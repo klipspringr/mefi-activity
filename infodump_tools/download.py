@@ -18,7 +18,7 @@ from infodump_tools.config import (
 )
 
 
-def get_publication_timestamp():
+def get_publication_timestamp() -> str:
     with urlopen(INFODUMP_HOMEPAGE) as f:
         contents = f.read().decode("utf-8")
         raw_date = re.search("Last updated: <b>(.+)</b>", contents).group(1).strip()
@@ -26,7 +26,7 @@ def get_publication_timestamp():
         return published.strftime("%-d %B %Y %H:%M")
 
 
-def download_zip(filename, infodump_dir, user_agent):
+def download_zip(filename: str, infodump_dir: str, user_agent: str | None) -> None:
     url = INFODUMP_BASE_URL + filename + ".txt.zip"
 
     req = Request(url)
@@ -49,14 +49,16 @@ def download_zip(filename, infodump_dir, user_agent):
         os.remove(tmp_path)
 
 
-def format_json(output_path):
+def format_json(output_path: str) -> None:
     # should keep the version consistent with package.json
     args = ["pnpx", "prettier@3.8.1", "--write", output_path]
     print(*args)
     subprocess.run(args, check=True)
 
 
-def download_infodump(dev, infodump_dir, output_path, user_agent):
+def download_infodump(
+    dev: bool, infodump_dir: str, output_path: str, user_agent: str | None
+) -> None:
     download_needed = True
 
     publication_timestamp = get_publication_timestamp()

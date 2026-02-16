@@ -1,67 +1,66 @@
 import os
 from datetime import date, datetime
-import pathlib
 from typing import Tuple
 
 import polars as pl
 from infodump_tools.config import (
     ACTIVITY_LEVELS,
     AGE_THRESHOLDS,
+    INFODUMP_FILENAMES,
     KEY_TIMESTAMP,
     SITES,
     TOP_N,
 )
-from polars import DataFrame, Enum, UInt8, UInt32, col, lit
+from polars import DataFrame, Enum, Expr, UInt8, UInt32, col, lit
 
 
 # we need to remove second fractions from timestamp as polars chokes on them
-def date_parser(col_name):
+def date_parser(col_name: str) -> Expr:
     return pl.concat_str(
         col(col_name).str.head(20), col(col_name).str.slice(-2, 2)
     ).str.to_datetime("%b %_d %Y %I:%M:%S%p", time_unit="ms")
 
 
-def extract_year(col_name):
+def extract_year(col_name: str) -> Expr:
     return col(col_name).dt.year()
 
 
-def extract_month(col_name):
+def extract_month(col_name: str) -> Expr:
     return pl.date(col(col_name).dt.year(), col(col_name).dt.month(), 1)
+
+
+# sometimes the infodump contains text files which were exported at different times
+# set cutoff date based on the earliest timestamp
+def get_cutoff_date(infodump_dir: str) -> date:
+    file_timestamps = dict()
+
+    for filename in INFODUMP_FILENAMES:
+        with open(os.path.join(infodump_dir, f"{filename}.txt")) as f:
+            timestamp = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
+            file_timestamps[filename] = timestamp
+
+    (oldest_file, oldest_timestamp) = min(file_timestamps.items(), key=lambda x: x[1])
+
+    print(f"Oldest file: {oldest_file}, {oldest_timestamp}")
+
+    return date(oldest_timestamp.year, oldest_timestamp.month, 1)
 
 
 # load infodump txt files into polars dataframes
 def load_dfs(
-    infodump_dir,
+    infodump_dir: str,
 ) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame]:
-    # sometimes the infodump contains text files which were exported at different times
-    # set infodump_date to the earliest timestamp
-    file_timestamps = dict()
+    cutoff_date = get_cutoff_date(infodump_dir)
 
-    for path in pathlib.Path(infodump_dir).glob("*.txt"):
-        with open(path) as f:
-            timestamp = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
-            file_timestamps[str(path)] = timestamp
+    print(f"Exclude data from {cutoff_date} onward")
 
-    (oldest_file, infodump_date) = min(file_timestamps.items(), key=lambda x: x[1])
+    print("Load posts")
 
-    print(f'Oldest file is "{oldest_file}": {infodump_date}')
+    # exclude data from latest (incomplete) month
+    exclude_latest_month = col("month") < cutoff_date
 
-    print("Load files into dataframes")
-
-    df_users = pl.read_csv(
-        source=os.path.join(infodump_dir, "usernames.txt"),
-        separator="\t",
-        skip_rows=1,
-        schema_overrides={"userid": UInt32},
-    ).with_columns(date_parser("joindate"))
-
-    exclude_meta_askmes = (
-        ~((col("site") == "meta") & (col("category") == 10)),
-    )  # exclude early AskMes stored in MeTa table
-
-    exclude_latest_month = col("month") < date(
-        infodump_date.year, infodump_date.month, 1
-    )  # exclude data from latest (incomplete) month
+    # exclude early AskMes stored in MeTa table
+    exclude_meta_askmes = ~((col("site") == "meta") & (col("category") == 10))
 
     df_posts_all = pl.concat(
         [
@@ -86,6 +85,8 @@ def load_dfs(
             for site in SITES
         ]
     ).sort("datestamp")
+
+    print("Load comments")
 
     df_comments_all = pl.concat(
         [
@@ -116,6 +117,15 @@ def load_dfs(
             for df in [df_posts_all, df_comments_all]
         ]
     ).sort("datestamp")
+
+    print("Load users")
+
+    df_users = pl.read_csv(
+        source=os.path.join(infodump_dir, "usernames.txt"),
+        separator="\t",
+        skip_rows=1,
+        schema_overrides={"userid": UInt32},
+    ).with_columns(date_parser("joindate"))
 
     # if first post or comment is earlier than user joindate, overwrite joindate.
     # should only affect 70-ish 1999 users, plus a couple of stray later accounts.
@@ -174,6 +184,21 @@ def filter_df_by_site(site, df: DataFrame) -> DataFrame:
     return df if site == "all" else df.filter(col("site") == site)
 
 
+# range of months from min to max
+# use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity
+def get_months_df(df: DataFrame) -> DataFrame:
+    return DataFrame(
+        {
+            "month": pl.date_range(
+                df.head(1).get_column("month")[0],
+                df.tail(1).get_column("month")[0],
+                interval="1mo",
+                eager=True,
+            )
+        }
+    )
+
+
 def calculate_for_site(
     site: str,
     joinyears: list[int],
@@ -188,18 +213,7 @@ def calculate_for_site(
     df_comments = filter_df_by_site(site, df_comments_all)
     df_activity = filter_df_by_site(site, df_activity_all)
 
-    # range of months from min to max
-    # use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity
-    df_months = DataFrame(
-        {
-            "month": pl.date_range(
-                df_activity.head(1).get_column("month")[0],
-                df_activity.tail(1).get_column("month")[0],
-                interval="1mo",
-                eager=True,
-            )
-        }
-    )
+    df_months = get_months_df(df_activity)
 
     start_date = df_months.head(1).get_column("month")[0]
     out = {
@@ -388,7 +402,7 @@ def calculate_for_site(
 
 
 # crunch infodump data into json
-def calculate_stats(infodump_dir, publication_timestamp=None) -> dict:
+def calculate_stats(infodump_dir: str, publication_timestamp: str) -> dict:
     (
         joinyears,
         df_users,
