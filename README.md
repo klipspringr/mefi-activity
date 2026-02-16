@@ -44,3 +44,5 @@ To remind myself how it works in future:
 ## Notebooks
 
 - Jupyter notebooks (in `notebooks/`) are an easy way of developing and testing Polars expressions. They are not used to generate the live site. Install Jupyter kernel requirements from `notebooks/requirements.txt`.
+
+- notebooks should have output and metadata stripped before committing. To set this up, run `nbstripout --install --python notebooks/.env-notebook/bin/python3`. `.git-config-copy` is a copy of a working `.git/config`.
