@@ -1,3 +1,4 @@
+altair==6.0.0
 asttokens==3.0.1
 attrs==25.4.0
 comm==0.2.3
@@ -9,11 +10,14 @@ ipykernel==7.2.0
 ipython==9.10.0
 ipython_pygments_lexers==1.1.1
 jedi==0.19.2
+Jinja2==3.1.6
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 jupyter_client==8.8.0
 jupyter_core==5.9.1
+MarkupSafe==3.0.3
 matplotlib-inline==0.2.1
+narwhals==2.16.0
 nbformat==5.10.4
 nbstripout==0.9.0
 nest-asyncio==1.6.0
@@ -39,4 +43,5 @@ six==1.17.0
 stack-data==0.6.3
 tornado==6.5.4
 traitlets==5.14.3
+typing_extensions==4.15.0
 wcwidth==0.6.0
