@@ -11,7 +11,17 @@ from infodump_tools.config import (
     SITES,
     TOP_N,
 )
-from polars import DataFrame, Enum, Expr, UInt8, UInt32, col, lit
+from polars import (
+    DataFrame,
+    Enum,
+    Expr,
+    String,
+    UInt16,
+    UInt8,
+    UInt32,
+    col,
+    lit,
+)
 
 
 # we need to remove second fractions from timestamp as polars chokes on them
@@ -22,7 +32,7 @@ def date_parser(col_name: str) -> Expr:
 
 
 def extract_year(col_name: str) -> Expr:
-    return col(col_name).dt.year()
+    return col(col_name).dt.year().cast(UInt16)
 
 
 def extract_month(col_name: str) -> Expr:
@@ -69,11 +79,16 @@ def load_dfs(
                 separator="\t",
                 skip_rows=1,
                 schema_overrides={
+                    "postid": UInt32,
                     "userid": UInt32,
+                    "datestamp": String,
                     "category": UInt8,
-                    "favorites": UInt32,
+                    "comments": UInt16,
+                    "favorites": UInt16,
                     "deleted": UInt8,
+                    "reason": String,
                 },
+                null_values=["[NULL]"],  # reason defaults to "[NULL]"
             )
             .rename({"favorites": "faves"})  # consistent columm names
             .with_columns(
@@ -95,8 +110,11 @@ def load_dfs(
                 separator="\t",
                 skip_rows=1,
                 schema_overrides={
+                    "commentid": UInt32,
+                    "postid": UInt32,
                     "userid": UInt32,
-                    "faves": UInt32,
+                    "datestamp": String,
+                    "faves": UInt16,
                     "best answer?": UInt8,
                 },
             )
@@ -124,7 +142,7 @@ def load_dfs(
         source=os.path.join(infodump_dir, "usernames.txt"),
         separator="\t",
         skip_rows=1,
-        schema_overrides={"userid": UInt32},
+        schema_overrides={"userid": UInt32, "joindate": String, "name": String},
     ).with_columns(date_parser("joindate"))
 
     # if first post or comment is earlier than user joindate, overwrite joindate.
