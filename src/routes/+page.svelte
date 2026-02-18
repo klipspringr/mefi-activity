@@ -147,6 +147,8 @@
         json["all"].posts_faves.reduce((t, c) => t + c, 0) + json["all"].comments_faves.reduce((t, c) => t + c, 0)
 
     /* UI and stores */
+    let menuElement: HTMLElement
+
     let showJumpMenu = $state(false)
 
     let timeSeriesMin = $derived(timeSeriesMinimums[data.period])
@@ -154,6 +156,11 @@
     let monthLabelsSite = $derived(monthLabels[data.site])
 
     let usersSite = $derived(json[data.site].users_monthly[0])
+
+    $effect(() => {
+        document.body.classList.toggle("overflow-hidden", showJumpMenu)
+        menuElement?.scrollTo({ top: 0, behavior: "instant" }) // reset menu scroll position
+    })
 </script>
 
 <svelte:head>
@@ -724,10 +731,11 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <menu
-    class="fixed right-0 top-0 z-50 h-screen max-w-[90vw] select-none overflow-y-auto border-mefi-blue bg-white p-4 text-lg transition-transform duration-300 ease-in-out"
+    class="fixed right-0 top-0 z-50 h-dvh max-w-[90vw] select-none overflow-y-auto border-mefi-blue bg-white px-4 pb-8 pt-4 text-lg transition-transform duration-300 ease-in-out"
     class:translate-x-0={showJumpMenu}
     class:translate-x-full={!showJumpMenu}
-    class:border-l-4={showJumpMenu}>
+    class:border-l-4={showJumpMenu}
+    bind:this={menuElement}>
     <ul class="space-y-1">
         <li class="flex items-center justify-between">
             <a href="#top" onclick={hideJumpMenu}>Top</a>
@@ -762,6 +770,10 @@
 {/if}
 
 <style lang="postcss">
+    :global(html, body) {
+        scrollbar-gutter: stable; /* avoid layout shift when showing jump menu */
+    }
+
     :global(h1, h2, h3) {
         @apply font-black;
     }
@@ -784,7 +796,7 @@
     }
 
     aside {
-        @apply mb-2 bg-gray-200 px-2 py-2 text-sm text-gray-700 sm:mb-4 sm:px-4 sm:text-base;
+        @apply mb-2 bg-gray-200 px-2 py-1 text-sm text-gray-700 sm:mb-4 sm:px-4 sm:py-2 sm:text-base;
     }
 
     ::selection {
