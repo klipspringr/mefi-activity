@@ -217,6 +217,21 @@ def get_months_df(df: DataFrame) -> DataFrame:
     )
 
 
+def get_dfs_for_site(
+    site: str,
+    df_posts_all: DataFrame,
+    df_comments_all: DataFrame,
+    df_activity_all: DataFrame,
+) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
+    df_posts = filter_df_by_site(site, df_posts_all)
+    df_comments = filter_df_by_site(site, df_comments_all)
+    df_activity = filter_df_by_site(site, df_activity_all)
+
+    df_months = get_months_df(df_activity)
+
+    return df_posts, df_comments, df_activity, df_months
+
+
 def calculate_for_site(
     site: str,
     joinyears: list[int],
@@ -227,11 +242,12 @@ def calculate_for_site(
 ) -> dict:
     print(f'Calculate stats for "{site}"')
 
-    df_posts = filter_df_by_site(site, df_posts_all)
-    df_comments = filter_df_by_site(site, df_comments_all)
-    df_activity = filter_df_by_site(site, df_activity_all)
-
-    df_months = get_months_df(df_activity)
+    (
+        df_posts,
+        df_comments,
+        df_activity,
+        df_months,
+    ) = get_dfs_for_site(site, df_posts_all, df_comments_all, df_activity_all)
 
     start_date = df_months.head(1).get_column("month")[0]
     out = {
@@ -382,6 +398,8 @@ def calculate_for_site(
 
         out[kind] = df_totals.get_column("len").to_list()
 
+        out[f"{kind}_faves"] = df_totals.get_column("faves").to_list()
+
         for label, format in [("weekdays", "%u"), ("hours", "%H")]:
             out[f"{kind}_{label}_percent"] = (
                 df.select("datestamp")
@@ -415,6 +433,35 @@ def calculate_for_site(
         out[f"{kind}_top_users"] = [
             c.to_list() for c in df_activity_by_top_users.get_columns()
         ]
+
+    if site == "askme":
+        df_best = (
+            df_months.join(
+                df_posts.select("month", "postid")
+                .join(
+                    df_comments.select("postid", "best"),
+                    on="postid",
+                    how="left",  # left join, so we keep posts with no comments
+                    coalesce=True,
+                )
+                .group_by("postid")
+                .agg(
+                    month=col("month").first(),
+                    best_sum=col("best").eq(1).sum(),
+                    best_any=col("best").eq(1).any(),
+                ),
+                on="month",
+                how="left",
+            )
+            .group_by("month")
+            .agg(
+                bests=col("best_sum").sum(),
+                posts_with_best=col("best_any").sum(),
+            )
+        )
+
+        out["bests"] = df_best.get_column("bests").to_list()
+        out["posts_with_best"] = df_best.get_column("posts_with_best").to_list()
 
     return out
 

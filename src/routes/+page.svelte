@@ -127,6 +127,15 @@
         new Date(json["all"]._start_year, json["all"]._start_month + i - 1, 1).getTime()
     )
 
+    const monthLabels: Record<TSite, number[]> = {
+        all: monthLabelsAll,
+        mefi: monthLabelsAll.slice(json["all"].posts.length - json["mefi"].posts.length),
+        askme: monthLabelsAll.slice(json["all"].posts.length - json["askme"].posts.length),
+        meta: monthLabelsAll.slice(json["all"].posts.length - json["meta"].posts.length),
+        fanfare: monthLabelsAll.slice(json["all"].posts.length - json["fanfare"].posts.length),
+        music: monthLabelsAll.slice(json["all"].posts.length - json["music"].posts.length),
+    }
+
     // total posts excluding AskMe, for denominator on deleted posts percentage chart
     const postsAsk = padSeriesLeft("askme", json["askme"].posts, 0)
     const postsExcludingAsk = json["all"].posts.map((n, i) => n - postsAsk[i])
@@ -134,13 +143,15 @@
     const totalPosts = json["all"].posts.reduce((t, c) => t + c, 0)
     const totalComments = json["all"].comments.reduce((t, c) => t + c, 0)
     const totalUsers = json["all"].users_registered[json["all"].users_registered.length - 1]
+    const totalFaves =
+        json["all"].posts_faves.reduce((t, c) => t + c, 0) + json["all"].comments_faves.reduce((t, c) => t + c, 0)
 
     /* UI and stores */
     let showJumpMenu = $state(false)
 
     let timeSeriesMin = $derived(timeSeriesMinimums[data.period])
 
-    let monthLabelsSite = $derived(monthLabelsAll.slice(json["all"].posts.length - json[data.site].posts.length))
+    let monthLabelsSite = $derived(monthLabels[data.site])
 
     let usersSite = $derived(json[data.site].users_monthly[0])
 </script>
@@ -202,7 +213,8 @@
         <li>
             <strong>{large(totalUsers)}</strong> registered users,
             <strong>{large(totalPosts)}</strong> posts,
-            <strong>{large(totalComments)}</strong> comments.
+            <strong>{large(totalComments)}</strong> comments, and
+            <strong>{large(totalFaves)}</strong> favourites.
         </li>
         <li>
             Questions or comments? <a href="https://www.metafilter.com/user/304523">MeFi Mail Klipspringer</a>
@@ -483,6 +495,7 @@
                     label: "Posts per user",
                     data: json[data.site].posts.map((v, i) => v / usersSite[i]),
                     borderColor: COLORS.posts,
+                    backgroundColor: COLORS.posts,
                 },
             ],
         }}
@@ -503,6 +516,7 @@
                     label: "Comments per user",
                     data: json[data.site].comments.map((v, i) => v / usersSite[i]),
                     borderColor: COLORS.comments,
+                    backgroundColor: COLORS.comments,
                 },
             ],
         }}
@@ -521,6 +535,7 @@
                     label: "Comments per post",
                     data: json[data.site].comments.map((v, i) => v / json[data.site].posts[i]),
                     borderColor: COLORS.comments,
+                    backgroundColor: COLORS.comments,
                 },
             ],
         }}
@@ -563,7 +578,99 @@
         Infodump excludes deleted Ask MetaFilter questions.
     </ChartComponent>
 
+    <h2>Best answers</h2>
+    <aside>
+        Best answers were <a
+            href="https://metatalk.metafilter.com/9011/Best-Answers-Arrive-on-the-Scene"
+            target="_blank">introduced</a> in February 2005. These charts can't be filtered by site (only Ask MetaFilter has
+        best answers).
+    </aside>
+    <ChartComponent
+        title="Questions with a best answer"
+        type="line"
+        data={{
+            labels: monthLabels["askme"],
+            datasets: [
+                {
+                    label: "Questions with a best answer",
+                    data: json["askme"].posts_with_best.map((v, i) => v / json["askme"].posts[i]),
+                    borderColor: COLORS.posts,
+                    backgroundColor: COLORS.posts,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin }, y: { ticks: { format: PERCENT_OPTIONS } } },
+        }}>
+        Percentage of Ask MetaFilter questions with at least one answer marked best.
+    </ChartComponent>
+    <ChartComponent
+        title="Best answers per question"
+        type="line"
+        data={{
+            labels: monthLabels["askme"],
+            datasets: [
+                {
+                    label: "Best answers per question",
+                    data: json["askme"].bests.map((v, i) => v / json["askme"].posts[i]),
+                    borderColor: COLORS.comments,
+                    backgroundColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin } },
+        }}>
+        Number of answers marked best, per Ask MetaFilter question.
+    </ChartComponent>
+
+    <h2>Favourites</h2>
+    <aside>
+        Favourites were <a
+            href="https://metatalk.metafilter.com/11851/Announcing-favorites-and-flagging"
+            target="_blank">introduced</a> in May 2006.
+    </aside>
+    <ChartComponent
+        title="Favourites per post"
+        type="line"
+        data={{
+            labels: monthLabelsSite,
+            datasets: [
+                {
+                    label: "Favourites per post",
+                    data: json[data.site].posts_faves.map((v, i) => v / json[data.site].posts[i]),
+                    borderColor: COLORS.posts,
+                    backgroundColor: COLORS.posts,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin } },
+        }} />
+    <ChartComponent
+        title="Favourites per comment"
+        type="line"
+        data={{
+            labels: monthLabelsSite,
+            datasets: [
+                {
+                    label: "Favourites per comment",
+                    data: json[data.site].comments_faves.map((v, i) => v / json[data.site].comments[i]),
+                    borderColor: COLORS.comments,
+                    backgroundColor: COLORS.comments,
+                },
+            ],
+        }}
+        options={{
+            scales: { x: { type: "timeseries", min: timeSeriesMin } },
+        }}>
+        Favourites per comment on FanFare appear incorrect. Reported to MeFi, February 2026.
+    </ChartComponent>
+
     <h2>Activity by time period</h2>
+    <aside>
+        Timestamps are recorded on the MetaFilter server in Pacific Time. These charts can't be filtered by time period.
+    </aside>
     <ChartComponent
         title="Posts and comments by day of week"
         type="bar"
@@ -587,9 +694,7 @@
             scales: { y: { max: 0.2, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } } },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
-        }}>
-        Timestamps are recorded on the MetaFilter server in Pacific Time. This chart can't be filtered by time period.
-    </ChartComponent>
+        }} />
     <ChartComponent
         title="Posts and comments by hour"
         type="bar"
@@ -613,9 +718,7 @@
             scales: { y: { max: 0.07, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } } },
             interaction: { mode: "index" },
             plugins: { legend: { display: true } },
-        }}>
-        Timestamps are recorded on the MetaFilter server in Pacific Time. This chart can't be filtered by time period.
-    </ChartComponent>
+        }} />
 </div>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -678,6 +781,10 @@
 
     header select:has(:global(option:not(:first-child):checked)) {
         @apply bg-mefi-paler text-mefi-dark ring-4 ring-white;
+    }
+
+    aside {
+        @apply mb-2 bg-gray-200 px-2 py-2 text-sm text-gray-700 sm:mb-4 sm:px-4 sm:text-base;
     }
 
     ::selection {
