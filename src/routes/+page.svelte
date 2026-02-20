@@ -295,7 +295,9 @@
             interaction: { mode: "index" },
             plugins: { legend: { display: true, reverse: true } },
         }}
-        tall />
+        tall>
+        Number of users who made at least <em>n</em> posts or comments in the given month.
+    </ChartComponent>
     <ChartComponent
         title="Users first and last active"
         type="bar"
