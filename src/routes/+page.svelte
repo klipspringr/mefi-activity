@@ -70,7 +70,7 @@
 
     const color = (i: number) => COLORS.sequence[i % COLORS.sequence.length]
 
-    /* Chart.js configuration */
+    /* CHART.JS CONFIGURATION */
     Chart.register(
         BarController,
         BarElement,
@@ -109,7 +109,7 @@
     Tooltip.positioners.cursor = (_: ActiveElement[], eventPos: Point) => eventPos
     Chart.defaults.plugins.tooltip.position = "cursor"
 
-    /* Parsing and derived data */
+    /* DERIVED DATA */
     const firstMonth = new Date(json["all"]._start_year, json["all"]._start_month - 1, 1)
     const latestMonthIndex = json["all"]._start_month - 1 + json["all"].posts.length - 1
     const latestCompletedMonth = new Date(json["all"]._start_year, latestMonthIndex, 1)
@@ -146,7 +146,7 @@
     const totalFaves =
         json["all"].posts_faves.reduce((t, c) => t + c, 0) + json["all"].comments_faves.reduce((t, c) => t + c, 0)
 
-    /* UI and stores */
+    /* UI AND STORES */
     let menuElement: HTMLElement
 
     let showJumpMenu = $state(false)
