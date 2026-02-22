@@ -24,8 +24,22 @@ from polars import (
 )
 
 
-# we need to remove second fractions from timestamp as polars chokes on them
+def read_timestamp(infodump_dir: str, filename: str) -> datetime:
+    """
+    Read the timestamp from an Infodump txt file.
+    """
+    with open(os.path.join(infodump_dir, f"{filename}.txt")) as f:
+        return datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
+
+
 def date_parser(col_name: str) -> Expr:
+    """
+    Parse Infodump datestamp column to a polars datetime.
+
+    Remove fractional seconds, as polars chokes on them.
+
+    The infodump datestamp column is in Mefi server time, America/Los_Angeles.
+    """
     return pl.concat_str(
         col(col_name).str.head(20), col(col_name).str.slice(-2, 2)
     ).str.to_datetime("%b %_d %Y %I:%M:%S%p", time_unit="ms")
@@ -39,38 +53,52 @@ def extract_month(col_name: str) -> Expr:
     return pl.date(col(col_name).dt.year(), col(col_name).dt.month(), 1)
 
 
-# sometimes the infodump contains text files which were exported at different times
-# set cutoff date based on the earliest timestamp
-def get_cutoff_date(infodump_dir: str) -> date:
-    file_timestamps = dict()
+def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
+    """
+    Get the date from which we want to exclude data. We only want months for which we have completed data for each subsite.
 
-    for filename in INFODUMP_FILENAMES:
-        with open(os.path.join(infodump_dir, f"{filename}.txt")) as f:
-            timestamp = datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
-            file_timestamps[filename] = timestamp
+    The Infodump has often been published in an inconsistent state e.g. text files produced at different times, data stopping months before publication, etc.
 
-    (oldest_file, oldest_timestamp) = min(file_timestamps.items(), key=lambda x: x[1])
+    So we base the cutoff date calculation on the OLDEST of:
+    - the timestamps on the first line of the text files
+    - the latest comment left on each subsite, excluding Music (which sees too little activity to be useful for this purpose)
+    """
+    files: dict[str, datetime] = {
+        filename: read_timestamp(infodump_dir, filename)
+        for filename in INFODUMP_FILENAMES
+    }
 
-    print(f"Oldest file: {oldest_file}, {oldest_timestamp}")
+    oldest_file, oldest_file_timestamp = min(files.items(), key=lambda x: x[1])
 
-    return date(oldest_timestamp.year, oldest_timestamp.month, 1)
+    print(f"Oldest file timestamp ({oldest_file}): {oldest_file_timestamp}")
 
+    latest_comments = dict(
+        df_comments_all.filter(~col("site").is_in(["music"]))
+        .group_by("site")
+        .agg(col("datestamp").max())
+        .iter_rows()
+    )
 
-# load infodump txt files into polars dataframes
-def load_dfs(
-    infodump_dir: str,
-) -> Tuple[list, DataFrame, DataFrame, DataFrame, DataFrame]:
-    cutoff_date = get_cutoff_date(infodump_dir)
+    for site, timestamp in latest_comments.items():
+        print(f'Latest comment on "{site}": {timestamp}')
+
+    cutoff_timestamp = min(oldest_file_timestamp, min(latest_comments.values()))
+
+    cutoff_date = date(cutoff_timestamp.year, cutoff_timestamp.month, 1)
 
     print(f"Exclude data from {cutoff_date} onward")
 
+    return cutoff_date
+
+
+def load_dfs(
+    infodump_dir: str,
+) -> Tuple[list[int], DataFrame, DataFrame, DataFrame, DataFrame]:
+    """
+    Load posts, comments, and users data from Infodump txt files into polars DataFrames.
+    """
+
     print("Load posts")
-
-    # exclude data from latest (incomplete) month
-    exclude_latest_month = col("month") < cutoff_date
-
-    # exclude early AskMes stored in MeTa table
-    exclude_meta_askmes = ~((col("site") == "meta") & (col("category") == 10))
 
     df_posts_all = pl.concat(
         [
@@ -96,7 +124,9 @@ def load_dfs(
                 site=lit(site, Enum(SITES)),
             )
             .with_columns(month=extract_month("datestamp"))
-            .filter(exclude_meta_askmes, exclude_latest_month)
+            .filter(
+                ~((col("site") == "meta") & (col("category") == 10))
+            )  # exclude early AskMes stored in MeTa table
             for site in SITES
         ]
     ).sort("datestamp")
@@ -124,7 +154,6 @@ def load_dfs(
                 site=lit(site, Enum(SITES)),
             )
             .with_columns(month=extract_month("datestamp"))
-            .filter(exclude_latest_month)
             for site in SITES
         ]
     ).sort("datestamp")
@@ -182,12 +211,21 @@ def load_dfs(
         joinyear=extract_year("joindate"), joinmonth=extract_month("joindate")
     )
 
+    col_joinyear = df_users.get_column("joinyear")
     joinyears = list(
         range(
-            df_users.get_column("joinyear").min(),
-            df_users.get_column("joinyear").max() + 1,
+            col_joinyear.min(),
+            col_joinyear.max() + 1,
         )
     )
+
+    print("Filter out incomplete months...")
+
+    cutoff_date = get_cutoff_date(infodump_dir, df_comments_all)
+
+    df_posts_all = df_posts_all.filter(col("month") < cutoff_date)
+    df_comments_all = df_comments_all.filter(col("month") < cutoff_date)
+    df_activity_all = df_activity_all.filter(col("month") < cutoff_date)
 
     return (
         joinyears,
@@ -202,14 +240,21 @@ def filter_df_by_site(site, df: DataFrame) -> DataFrame:
     return df if site == "all" else df.filter(col("site") == site)
 
 
-# range of months from min to max
-# use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity
 def get_months_df(df: DataFrame) -> DataFrame:
+    """
+    Range of months from min to max.
+
+    Use this instead of group_by_dynamic(period="1mo"), because it includes months with no activity.
+
+    Assumes df is sorted by datestamp, so first() is min and last() is max.
+    """
+    col = df.get_column("month")
     return DataFrame(
         {
             "month": pl.date_range(
-                df.head(1).get_column("month")[0],
-                df.tail(1).get_column("month")[0],
+                col.first(),
+                col.last(),
+                closed="both",
                 interval="1mo",
                 eager=True,
             )
@@ -223,6 +268,10 @@ def get_dfs_for_site(
     df_comments_all: DataFrame,
     df_activity_all: DataFrame,
 ) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
+    """
+    Get posts, comments, activity, and months DataFrames for a given site.
+    """
+
     df_posts = filter_df_by_site(site, df_posts_all)
     df_comments = filter_df_by_site(site, df_comments_all)
     df_activity = filter_df_by_site(site, df_activity_all)
@@ -240,6 +289,12 @@ def calculate_for_site(
     df_comments_all: DataFrame,
     df_activity_all: DataFrame,
 ) -> dict:
+    """
+    Calculate stats for a given site.
+
+    Returns a dictionary to be output as json.
+    """
+
     print(f'Calculate stats for "{site}"')
 
     (
@@ -249,7 +304,7 @@ def calculate_for_site(
         df_months,
     ) = get_dfs_for_site(site, df_posts_all, df_comments_all, df_activity_all)
 
-    start_date = df_months.head(1).get_column("month")[0]
+    start_date = df_months.get_column("month").first()
     out = {
         "_start_year": start_date.year,
         "_start_month": start_date.month,
@@ -266,15 +321,19 @@ def calculate_for_site(
         .agg(count=col("userid").count())
     )
 
-    df_users_monthly_activity = df_users_monthly.group_by("month").agg(
-        (
-            col("count").filter(col("count") >= level).count().alias(str(level))
-            for level in ACTIVITY_LEVELS
+    df_users_monthly_by_activity_level = (
+        df_users_monthly.group_by("month")
+        .agg(
+            (
+                col("count").filter(col("count") >= level).count().alias(str(level))
+                for level in ACTIVITY_LEVELS
+            )
         )
+        .drop("month")
     )
 
     out["users_monthly"] = [
-        c.to_list() for c in df_users_monthly_activity.drop("month").get_columns()
+        c.to_list() for c in df_users_monthly_by_activity_level.get_columns()
     ]
 
     df_users_monthly_by_joined = (
@@ -468,6 +527,12 @@ def calculate_for_site(
 
 # crunch infodump data into json
 def calculate_stats(infodump_dir: str, publication_timestamp: str) -> dict:
+    """
+    Calculate stats for all sites.
+
+    Returns a dictionary to be output as json.
+    """
+
     (
         joinyears,
         df_users,
