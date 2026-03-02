@@ -1,12 +1,15 @@
 import os
 from datetime import date, datetime
 from typing import Tuple
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from infodump_tools.config import (
     ACTIVITY_LEVELS,
     AGE_THRESHOLDS,
+    INFODUMP_FILE_TIMESTAMP_TZ,
     INFODUMP_FILENAMES,
+    INFODUMP_TZ,
     KEY_TIMESTAMP,
     SITES,
     TOP_N,
@@ -24,12 +27,23 @@ from polars import (
 )
 
 
-def read_timestamp(infodump_dir: str, filename: str) -> datetime:
+def read_file_timestamp(infodump_dir: str, filename: str) -> datetime:
     """
-    Read the timestamp from an Infodump txt file.
+    Read the timestamp from the first line of an Infodump txt file.
     """
     with open(os.path.join(infodump_dir, f"{filename}.txt")) as f:
         return datetime.strptime(f.readline().strip(), "%a %b %d %H:%M:%S %Y")
+
+
+def convert_tz(dt: datetime, from_tz: str, to_tz: str) -> datetime:
+    """
+    Convert a timezone-naive datetime from one timezone to another.
+    """
+    return (
+        dt.replace(tzinfo=ZoneInfo(from_tz))
+        .astimezone(ZoneInfo(to_tz))
+        .replace(tzinfo=None)
+    )
 
 
 def date_parser(col_name: str) -> Expr:
@@ -39,6 +53,8 @@ def date_parser(col_name: str) -> Expr:
     Remove fractional seconds, as polars chokes on them.
 
     The infodump datestamp column is in Mefi server time, America/Los_Angeles.
+
+    But we store a timezone-naive datetime, because supplying timezone="America/Los_Angeles" causes ComputeErrors about impossible timestamps at DST transitions.
     """
     return pl.concat_str(
         col(col_name).str.head(20), col(col_name).str.slice(-2, 2)
@@ -55,22 +71,26 @@ def extract_month(col_name: str) -> Expr:
 
 def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
     """
-    Get the date from which we want to exclude data. We only want months for which we have completed data for each subsite.
+    We don't want to show months with incomplete data. Returns the first day we want to exclude.
 
     The Infodump has often been published in an inconsistent state e.g. text files produced at different times, data stopping months before publication, etc.
 
     So we base the cutoff date calculation on the OLDEST of:
-    - the timestamps on the first line of the text files
+    - the timestamps on the first line of the text files (these appear to be UTC, so convert them to America/Los_Angeles to match Infodump)
     - the latest comment left on each subsite, excluding Music (which sees too little activity to be useful for this purpose)
     """
     files: dict[str, datetime] = {
-        filename: read_timestamp(infodump_dir, filename)
+        filename: convert_tz(
+            read_file_timestamp(infodump_dir, filename),
+            INFODUMP_FILE_TIMESTAMP_TZ,
+            INFODUMP_TZ,
+        )
         for filename in INFODUMP_FILENAMES
     }
 
-    oldest_file, oldest_file_timestamp = min(files.items(), key=lambda x: x[1])
+    oldest_file, oldest_file_ts = min(files.items(), key=lambda x: x[1])
 
-    print(f"Oldest file timestamp ({oldest_file}): {oldest_file_timestamp}")
+    print(f"Oldest file: {oldest_file}, {oldest_file_ts} (converted to {INFODUMP_TZ})")
 
     latest_comments = dict(
         df_comments_all.filter(~col("site").is_in(["music"]))
@@ -79,12 +99,12 @@ def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
         .iter_rows()
     )
 
-    for site, timestamp in latest_comments.items():
-        print(f'Latest comment on "{site}": {timestamp}')
+    for site, ts in latest_comments.items():
+        print(f'Latest "{site}" comment: {ts}')
 
-    cutoff_timestamp = min(oldest_file_timestamp, min(latest_comments.values()))
+    cutoff_ts = min(oldest_file_ts, min(latest_comments.values()))
 
-    cutoff_date = date(cutoff_timestamp.year, cutoff_timestamp.month, 1)
+    cutoff_date = date(cutoff_ts.year, cutoff_ts.month, 1)
 
     print(f"Exclude data from {cutoff_date} onward")
 

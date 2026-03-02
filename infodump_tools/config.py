@@ -2,6 +2,8 @@ SITES = ["mefi", "askme", "meta", "fanfare", "music"]
 
 INFODUMP_HOMEPAGE = "https://stuff.metafilter.com/infodump/"
 INFODUMP_BASE_URL = "https://mefi.us/infodump/"
+INFODUMP_TZ = "America/Los_Angeles"
+INFODUMP_FILE_TIMESTAMP_TZ = "UTC"
 
 INFODUMP_FILENAMES = (
     ["usernames"]
