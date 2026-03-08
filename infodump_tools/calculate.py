@@ -77,7 +77,7 @@ def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
 
     So we base the cutoff date calculation on the OLDEST of:
     - the timestamps on the first line of the text files (these appear to be UTC, so convert them to America/Los_Angeles to match Infodump)
-    - the latest comment left on each subsite, excluding Music (which sees too little activity to be useful for this purpose)
+    - the newest comment left on each subsite, excluding Music (which sees too little activity to be useful for this purpose)
     """
     files: dict[str, datetime] = {
         filename: convert_tz(
@@ -92,17 +92,18 @@ def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
 
     print(f"Oldest file: {oldest_file}, {oldest_file_ts} (converted to {INFODUMP_TZ})")
 
-    latest_comments = dict(
+    newest_comments = dict(
         df_comments_all.filter(~col("site").is_in(["music"]))
         .group_by("site")
         .agg(col("datestamp").max())
+        .sort("site")
         .iter_rows()
     )
 
-    for site, ts in latest_comments.items():
-        print(f'Latest "{site}" comment: {ts}')
+    for site, ts in newest_comments.items():
+        print(f'Newest comment on "{site}": {ts} (server time)')
 
-    cutoff_ts = min(oldest_file_ts, min(latest_comments.values()))
+    cutoff_ts = min(oldest_file_ts, min(newest_comments.values()))
 
     cutoff_date = date(cutoff_ts.year, cutoff_ts.month, 1)
 

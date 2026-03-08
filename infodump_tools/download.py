@@ -92,7 +92,7 @@ def download_infodump(
     with open(output_path, "w") as w:
         json.dump(out, w, sort_keys=True)
 
-    print("Format with Prettier")
+    print("Format JSON")
     format_json(output_path)
 
 
