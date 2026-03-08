@@ -180,7 +180,7 @@
     <header class="sticky top-0 z-20 mb-2 select-none">
         <div class="flex h-10 items-center gap-x-2 bg-mefi-blue text-white sm:gap-x-4">
             <h1 class="pl-4 text-lg xs:text-2xl">
-                <a href="/" class="uppercase tracking-wide !no-underline">
+                <a href="/" class="uppercase tracking-wide !no-underline" data-sveltekit-reload>
                     <span class="font-extrabold text-white">MeFi</span><span class="font-semibold text-mefi-green"
                         >St.at</span>
                 </a>
