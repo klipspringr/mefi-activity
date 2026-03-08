@@ -46,7 +46,7 @@
     const updateURL = (key: string, value: string) => {
         const url = new URL(window.location.href)
         url.searchParams.set(key, value)
-        goto(url, { replaceState: true, noScroll: true })
+        goto(url, { invalidateAll: true, noScroll: true })
     }
 
     const hideJumpMenu = () => (showJumpMenu = false)
@@ -235,10 +235,6 @@
             product.
         </li>
     </ul>
-
-    <!-- <div class="bg-rose-100 px-4 py-2 text-sm font-bold text-rose-600 sm:text-base">
-        <strong>[DATESTAMP]</strong> [NOTICE]
-    </div> -->
 
     <h2>Users</h2>
     <ChartComponent
