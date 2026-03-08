@@ -9,7 +9,7 @@
         type Point,
     } from "chart.js"
     import "chartjs-adapter-date-fns"
-    import { onMount, type Snippet } from "svelte"
+    import { type Snippet } from "svelte"
 
     let {
         title,
@@ -36,15 +36,14 @@
 
     let anchor = $derived((titleForAnchor || title).trim().toLowerCase().replace(/\W/g, "_"))
 
-    onMount(() => {
-        chart = new Chart(canvasElement, { type, data, options, plugins })
-        return () => chart?.destroy()
-    })
-
     $effect(() => {
-        chart.data = data
-        chart.options = options
-        chart.update()
+        if (chart) {
+            chart.data = data
+            chart.options = options
+            chart.update()
+        } else {
+            chart = new Chart(canvasElement, { type, data, options, plugins })
+        }
     })
 </script>
 
