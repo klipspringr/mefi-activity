@@ -1,12 +1,13 @@
-export const SITES = {
-    all: "All sites",
+export const SUBSITES = {
     mefi: "MetaFilter",
-    askme: "Ask MetaFilter",
+    askme: "AskMe",
     meta: "MetaTalk",
-    fanfare: "FanFare",
     music: "Music",
+    fanfare: "FanFare",
 } as const
+export const SITES = { all: "All sites", ...SUBSITES } as const
 export const SITES_KEYS = Object.keys(SITES) as (keyof typeof SITES)[]
+export const SUBSITES_KEYS = Object.keys(SUBSITES) as (keyof typeof SUBSITES)[]
 export type TSite = keyof typeof SITES
 export const isSite = (value: string): value is TSite => value in SITES
 
@@ -38,8 +39,8 @@ export const COLORS = {
         mefi: "rgb(54, 162, 235)",
         askme: "rgb(75, 192, 192)",
         meta: "rgb(255, 159, 64)",
-        fanfare: "rgb(153, 102, 255)",
         music: "rgb(255, 99, 132)",
+        fanfare: "rgb(153, 102, 255)",
     },
     sequence: [
         "rgb(54, 162, 235)",
@@ -68,4 +69,4 @@ export const PERCENT_OPTIONS: Intl.NumberFormatOptions = {
     style: "percent",
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
-} as const
+}

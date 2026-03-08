@@ -14,6 +14,7 @@
         PERIODS,
         SITES,
         SITES_KEYS,
+        SUBSITES_KEYS,
         TOP_N,
         type TPeriod,
         type TSite,
@@ -57,11 +58,15 @@
         return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() // zeroth day of next month = last day of this month
     }
 
-    const tooltipUsersTotal = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
+    const tooltipTotalUsers = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
         "Total users: " + large(usersSite[ctx[0].dataIndex])
 
-    const tooltipPerDay = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) =>
-        "Per day: " + large(Math.round((ctx[0].parsed.y ?? 0) / daysInMonth(ctx[0].parsed.x ?? 0)))
+    const tooltipTotalPerDay = (ctx: TooltipItem<keyof ChartTypeRegistry>[]) => {
+        const total = ctx.reduce((t, c) => t + (c.parsed.y ?? 0), 0)
+        const days = daysInMonth(ctx[0].parsed.x ?? 0)
+        const totalPerDay = Math.round(total / days)
+        return `Total: ${large(total)} (${large(totalPerDay)} per day)`
+    }
 
     const padSeriesLeft = (site: TSite, series: number[], value: number): number[] =>
         Array(json["all"].posts.length - json[site].posts.length)
@@ -253,7 +258,7 @@
                 x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
                 y: { stacked: true, ticks: { callback: tickCompact }, grid: { z: 1 } },
             },
-            plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
+            plugins: { tooltip: { callbacks: { afterTitle: tooltipTotalUsers } } },
         }} />
     <ChartComponent
         title="Users who posted or commented, by year joined"
@@ -272,7 +277,7 @@
                 x: { stacked: true, type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
                 y: { stacked: true, max: 1, ticks: { format: PERCENT_OPTIONS }, grid: { z: 1 } },
             },
-            plugins: { tooltip: { callbacks: { afterTitle: tooltipUsersTotal } } },
+            plugins: { tooltip: { callbacks: { afterTitle: tooltipTotalUsers } } },
         }} />
     <ChartComponent
         title="Users by number of posts and comments"
@@ -453,46 +458,91 @@
     </ChartComponent>
 
     <h2>Posts and comments</h2>
-    <ChartComponent
-        title="Posts"
-        type="bar"
-        data={{
-            labels: monthLabelsSite,
-            datasets: [
-                {
-                    label: "Posts",
-                    data: json[data.site].posts,
-                    backgroundColor: COLORS.posts,
+    {#if data.site === "all"}
+        <ChartComponent
+            title="Posts"
+            type="bar"
+            data={{
+                labels: monthLabelsAll,
+                datasets: SUBSITES_KEYS.map((site) => ({
+                    label: SITES[site],
+                    data: padSeriesLeft(site, json[site].posts, NaN),
+                    backgroundColor: COLORS.sites[site],
+                })),
+            }}
+            options={{
+                scales: {
+                    x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 }, stacked: true },
+                    y: { ticks: { callback: tickCompact }, grid: { z: 1 }, stacked: true },
                 },
-            ],
-        }}
-        options={{
-            scales: {
-                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
-                y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
-            },
-            plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
-        }} />
-    <ChartComponent
-        title="Comments"
-        type="bar"
-        data={{
-            labels: monthLabelsSite,
-            datasets: [
-                {
-                    label: "Comments",
-                    data: json[data.site].comments,
-                    backgroundColor: COLORS.comments,
+                interaction: { mode: "index" },
+                plugins: { tooltip: { callbacks: { footer: tooltipTotalPerDay } }, legend: { display: true } },
+            }}
+            tall />
+        <ChartComponent
+            title="Comments"
+            type="bar"
+            data={{
+                labels: monthLabelsAll,
+                datasets: SUBSITES_KEYS.map((site) => ({
+                    label: SITES[site],
+                    data: padSeriesLeft(site, json[site].comments, NaN),
+                    backgroundColor: COLORS.sites[site],
+                })),
+            }}
+            options={{
+                scales: {
+                    x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 }, stacked: true },
+                    y: { ticks: { callback: tickCompact }, grid: { z: 1 }, stacked: true },
                 },
-            ],
-        }}
-        options={{
-            scales: {
-                x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
-                y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
-            },
-            plugins: { tooltip: { callbacks: { footer: tooltipPerDay } } },
-        }} />
+                interaction: { mode: "index" },
+                plugins: { tooltip: { callbacks: { footer: tooltipTotalPerDay } }, legend: { display: true } },
+            }}
+            tall />
+    {:else}
+        <ChartComponent
+            title="Posts"
+            type="bar"
+            data={{
+                labels: monthLabelsSite,
+                datasets: [
+                    {
+                        label: "Posts",
+                        data: json[data.site].posts,
+                        backgroundColor: COLORS.posts,
+                    },
+                ],
+            }}
+            options={{
+                scales: {
+                    x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                    y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
+                },
+                plugins: { tooltip: { callbacks: { footer: tooltipTotalPerDay } }, legend: { display: true } },
+            }}
+            tall />
+        <ChartComponent
+            title="Comments"
+            type="bar"
+            data={{
+                labels: monthLabelsSite,
+                datasets: [
+                    {
+                        label: "Comments",
+                        data: json[data.site].comments,
+                        backgroundColor: COLORS.comments,
+                    },
+                ],
+            }}
+            options={{
+                scales: {
+                    x: { type: "timeseries", min: timeSeriesMin, grid: { z: 1 } },
+                    y: { ticks: { callback: tickCompact }, grid: { z: 1 } },
+                },
+                plugins: { tooltip: { callbacks: { footer: tooltipTotalPerDay } }, legend: { display: true } },
+            }}
+            tall />
+    {/if}
     <ChartComponent
         title="Posts per user"
         titleForAnchor="Posts per active user"
@@ -559,9 +609,10 @@
             datasets: [
                 {
                     label: "Percentage of posts deleted",
-                    data: json[data.site].posts_deleted.map(
-                        (v, i) => v / (data.site === "all" ? postsExcludingAsk : json[data.site].posts)[i]
-                    ),
+                    data:
+                        data.site === "all"
+                            ? json[data.site].posts_deleted.map((v, i) => v / postsExcludingAsk[i])
+                            : json[data.site].posts_deleted.map((v, i) => v / json[data.site].posts[i]),
                     backgroundColor: COLORS.deleted,
                 },
             ],
