@@ -41,7 +41,7 @@ referencing==0.37.0
 rpds-py==0.30.0
 six==1.17.0
 stack-data==0.6.3
-tornado==6.5.4
+tornado==6.5.5
 traitlets==5.14.3
 typing_extensions==4.15.0
 wcwidth==0.6.0
