@@ -50,7 +50,7 @@ jobs:
                   PYTHONUNBUFFERED: 1
               run: python -m infodump_tools.download infodump src/data/data.json
 
-            - name: Push any update
+            - name: Push update (if any)
               run: |
                   git config --global user.name 'mefi-activity-automated'
                   git config --global user.email 'mefi-activity-automated'
@@ -58,4 +58,18 @@ jobs:
                   if ! git diff-index --quiet HEAD; then
                     git commit -m "Infodump updated: $(jq -r "._published" src/data/data.json)"
                     git push
+                  fi
+
+            - name: Archive Infodump (if any) to B2
+              env:
+                  RESTIC_REPOSITORY: ${{ secrets.RESTIC_REPOSITORY }}
+                  RESTIC_PASSWORD: infodump
+                  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+              run: |
+                  if [ -d infodump ]; then
+                    sudo apt-get update
+                    sudo apt-get install -y restic
+                    restic snapshots || restic init
+                    restic backup infodump --verbose
                   fi
