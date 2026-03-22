@@ -60,10 +60,11 @@ jobs:
                     git push
                   fi
 
-            - name: Archive Infodump (if any) to B2
+            - name: Archive Infodump (if any)
               env:
                   RESTIC_REPOSITORY: ${{ secrets.RESTIC_REPOSITORY }}
                   RESTIC_PASSWORD: infodump
+                  RESTIC_COMPRESSION: max
                   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
                   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
               run: |
@@ -72,4 +73,6 @@ jobs:
                     sudo apt-get install -y restic
                     restic snapshots || restic init
                     restic backup infodump --verbose
+                    restic check
+                    restic stats --mode raw-data
                   fi
