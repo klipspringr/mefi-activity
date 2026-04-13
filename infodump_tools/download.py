@@ -51,7 +51,7 @@ def download_zip(filename: str, infodump_dir: str, user_agent: str | None) -> No
 
 def format_json(output_path: str) -> None:
     # should keep the version consistent with package.json
-    args = ["pnpx", "prettier@3.8.1", "--write", output_path]
+    args = ["npx", "prettier@3.8.1", "--write", output_path]
     print(*args)
     subprocess.run(args, check=True)
 

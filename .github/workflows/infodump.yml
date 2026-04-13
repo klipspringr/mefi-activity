@@ -20,6 +20,8 @@ concurrency:
 jobs:
     infodump-check:
         runs-on: ubuntu-latest
+        env:
+            DATA_JSON: src/data/data.json
         steps:
             - name: Checkout
               uses: actions/checkout@v6
@@ -35,30 +37,21 @@ jobs:
             - name: Install pip requirements
               run: pip install -r infodump_tools/requirements.txt
 
-            - name: Install pnpm
-              uses: pnpm/action-setup@v6
-
-            - name: Install Node
-              uses: actions/setup-node@v6
-              with:
-                  node-version: 22
-                  cache: "pnpm"
-
             - name: Check for Infodump updates
               env:
                   INFODUMP_USER_AGENT: ${{ secrets.INFODUMP_USER_AGENT }}
                   PYTHONUNBUFFERED: 1
-              run: python -m infodump_tools.download infodump src/data/data.json
+              run: python -m infodump_tools.download infodump "$DATA_JSON"
 
             - name: Push update (if any)
               run: |
-                  git config --global user.name 'mefi-activity-automated'
-                  git config --global user.email 'mefi-activity-automated'
-                  git add src/data/data.json
-                  if ! git diff-index --quiet HEAD; then
-                    git commit -m "Infodump updated: $(jq -r "._published" src/data/data.json)"
-                    git push
-                  fi
+                if ! git diff-index --quiet HEAD -- "$DATA_JSON"; then
+                  git config user.name 'mefi-activity-automated'
+                  git config user.email 'mefi-activity-automated'
+                  git add "$DATA_JSON"
+                  git commit -m "Infodump updated: $(jq -r "._published" "$DATA_JSON")"
+                  git push
+                fi
 
             - name: Archive Infodump (if any)
               env:
@@ -68,11 +61,11 @@ jobs:
                   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
                   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
               run: |
-                  if [ -d infodump ]; then
-                    sudo apt-get update
-                    sudo apt-get install -y restic
-                    restic snapshots || restic init
-                    restic backup infodump --verbose
-                    restic check
-                    restic stats --mode raw-data
-                  fi
+                if [ -d infodump ]; then
+                  sudo apt-get update
+                  sudo apt-get install -y restic
+                  restic snapshots || restic init
+                  restic backup infodump --verbose
+                  restic check
+                  restic stats --mode raw-data
+                fi
