@@ -45,13 +45,13 @@ jobs:
 
             - name: Push update (if any)
               run: |
-                if ! git diff-index --quiet HEAD -- "$DATA_JSON"; then
-                  git config user.name 'mefi-activity-automated'
-                  git config user.email 'mefi-activity-automated'
-                  git add "$DATA_JSON"
-                  git commit -m "Infodump updated: $(jq -r "._published" "$DATA_JSON")"
-                  git push
-                fi
+                  if ! git diff-index --quiet HEAD -- "$DATA_JSON"; then
+                    git config user.name 'mefi-activity-automated'
+                    git config user.email 'mefi-activity-automated'
+                    git add "$DATA_JSON"
+                    git commit -m "Infodump updated: $(jq -r "._published" "$DATA_JSON")"
+                    git push
+                  fi
 
             - name: Archive Infodump (if any)
               env:
@@ -61,11 +61,11 @@ jobs:
                   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
                   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
               run: |
-                if [ -d infodump ]; then
-                  sudo apt-get update
-                  sudo apt-get install -y restic
-                  restic snapshots || restic init
-                  restic backup infodump --verbose
-                  restic check
-                  restic stats --mode raw-data
-                fi
+                  if [ -d infodump ]; then
+                    sudo apt-get update
+                    sudo apt-get install --yes --no-install-recommends restic
+                    restic snapshots || restic init
+                    restic backup infodump --verbose
+                    restic check
+                    restic stats --mode raw-data
+                  fi
