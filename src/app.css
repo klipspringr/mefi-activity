@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html,
+    body {
+        scrollbar-gutter: stable; /* avoid layout shift when showing jump menu */
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-black;
+    }
+
+    h2 {
+        @apply mb-2 select-none bg-mefi-paler px-2 py-1 text-base uppercase tracking-[0.15em] text-mefi-blue sm:px-4;
+    }
+
+    a {
+        @apply font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
+    }
+
+    aside {
+        @apply mb-2 bg-gray-200 px-2 py-1 text-sm text-gray-700 sm:mb-4 sm:px-4 sm:py-2 sm:text-base;
+    }
+
+    ::selection {
+        @apply bg-mefi-blue text-white;
+    }
+}

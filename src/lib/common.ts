@@ -70,3 +70,5 @@ export const PERCENT_OPTIONS: Intl.NumberFormatOptions = {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
 }
+
+export const total = (arr: number[]) => arr.reduce((t, c) => t + c, 0)

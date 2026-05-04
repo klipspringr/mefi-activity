@@ -49,7 +49,13 @@
 
 <div class="mb-8 px-2 sm:px-4">
     <h3 id={anchor} class="scroll-mt-[94px] text-xl text-mefi-blue sm:text-2xl">
-        {title} <a href="#{anchor}" class="select-none text-lg font-black text-mefi-pale hover:text-mefi-blue">#</a>
+        {title}
+        <a
+            href="#{anchor}"
+            class="select-none text-lg font-black text-mefi-pale no-underline hover:text-mefi-blue"
+            title="Permalink to this chart">
+            #
+        </a>
     </h3>
     <div class="relative {tall ? 'h-[70vw] sm:h-[50vw]' : 'h-[60vw] sm:h-[50vw]'} sm:max-h-[640px]">
         <canvas bind:this={canvasElement}></canvas>

@@ -16,6 +16,7 @@
         SITES_KEYS,
         SUBSITES_KEYS,
         TOP_N,
+        total,
         type TPeriod,
         type TSite,
     } from "$lib/common"
@@ -145,11 +146,10 @@
     const postsAsk = padSeriesLeft("askme", json["askme"].posts, 0)
     const postsExcludingAsk = json["all"].posts.map((n, i) => n - postsAsk[i])
 
-    const totalPosts = json["all"].posts.reduce((t, c) => t + c, 0)
-    const totalComments = json["all"].comments.reduce((t, c) => t + c, 0)
+    const totalPosts = total(json["all"].posts)
+    const totalComments = total(json["all"].comments)
     const totalUsers = json["all"].users_registered[json["all"].users_registered.length - 1]
-    const totalFaves =
-        json["all"].posts_faves.reduce((t, c) => t + c, 0) + json["all"].comments_faves.reduce((t, c) => t + c, 0)
+    const totalFaves = total(json["all"].posts_faves) + total(json["all"].comments_faves)
 
     /* UI AND STORES */
     let menuElement: HTMLElement
@@ -180,9 +180,11 @@
     <header class="sticky top-0 z-20 mb-2 select-none">
         <div class="flex h-10 items-center gap-x-2 bg-mefi-blue text-white sm:gap-x-4">
             <h1 class="pl-4 text-lg xs:text-2xl">
-                <a href="/" class="uppercase tracking-wide !no-underline" data-sveltekit-reload>
-                    <span class="font-extrabold text-white">MeFi</span><span class="font-semibold text-mefi-green"
-                        >St.at</span>
+                <a
+                    href="/#top"
+                    class="font-extrabold uppercase tracking-wide text-white !no-underline"
+                    data-sveltekit-reload>
+                    Mefi<span class="font-semibold text-mefi-green">Stat</span>
                 </a>
             </h1>
             <div class="grow translate-y-px text-sm/none font-medium tracking-wide text-mefi-paler sm:text-base/none">
@@ -819,22 +821,6 @@
 {/if}
 
 <style lang="postcss">
-    :global(html, body) {
-        scrollbar-gutter: stable; /* avoid layout shift when showing jump menu */
-    }
-
-    :global(h1, h2, h3) {
-        @apply font-black;
-    }
-
-    h2 {
-        @apply mb-2 select-none bg-mefi-paler px-2 py-1 text-base uppercase tracking-[0.15em] text-mefi-blue sm:px-4;
-    }
-
-    a {
-        @apply font-semibold text-mefi-blue underline decoration-mefi-pale decoration-2 underline-offset-2 hover:decoration-mefi-blue;
-    }
-
     header select,
     header select > option {
         @apply rounded-full bg-mefi-blue py-1 pl-2 pr-4 text-sm font-semibold text-white focus:outline-none xs:text-base;
@@ -842,13 +828,5 @@
 
     header select:has(:global(option:not(:first-child):checked)) {
         @apply bg-mefi-paler text-mefi-dark ring-4 ring-white;
-    }
-
-    aside {
-        @apply mb-2 bg-gray-200 px-2 py-1 text-sm text-gray-700 sm:mb-4 sm:px-4 sm:py-2 sm:text-base;
-    }
-
-    ::selection {
-        @apply bg-mefi-blue text-white;
     }
 </style>
