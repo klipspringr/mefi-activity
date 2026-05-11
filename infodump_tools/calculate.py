@@ -473,10 +473,10 @@ def calculate_for_site(
         df_totals = (
             df_months.join(df, on="month", how="left", coalesce=True)
             .group_by("month")
-            .agg(pl.len(), pl.sum("faves"))
+            .agg(col("datestamp").count().alias("count"), pl.sum("faves"))
         )
 
-        out[kind] = df_totals.get_column("len").to_list()
+        out[kind] = df_totals.get_column("count").to_list()
 
         out[f"{kind}_faves"] = df_totals.get_column("faves").to_list()
 
@@ -497,7 +497,7 @@ def calculate_for_site(
             )
             .group_by("month")
             .agg(
-                pl.len(),
+                pl.col("userid").count().alias("len"),
                 col("userid").unique_counts().alias("counts").sort(descending=True),
             )
             .select(
@@ -507,7 +507,7 @@ def calculate_for_site(
                 ).alias(str(n))
                 for n in TOP_N
             )
-            .select(pl.all().round(3))
+            .with_columns(pl.all().fill_nan(0).fill_null(0).round(3))
         )
 
         out[f"{kind}_top_users"] = [
