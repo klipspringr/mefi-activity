@@ -107,9 +107,7 @@ def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
 
     # cutoff_ts = min(oldest_file_ts, min(newest_comments.values()))
 
-    cutoff_ts = min(oldest_file_ts)
-
-    cutoff_date = date(cutoff_ts.year, cutoff_ts.month, 1)
+    cutoff_date = date(oldest_file_ts.year, oldest_file_ts.month, 1)
 
     print(f"Exclude data from {cutoff_date} onward")
 
