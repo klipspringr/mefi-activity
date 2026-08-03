@@ -33,6 +33,8 @@ def download_zip(filename: str, infodump_dir: str, user_agent: str | None) -> No
     if user_agent is not None:
         req.add_header("User-Agent", user_agent)
 
+    tmp_path = None
+
     try:
         with urlopen(req) as resp, tempfile.NamedTemporaryFile(delete=False) as tmp:
             shutil.copyfileobj(resp, tmp)
@@ -46,7 +48,8 @@ def download_zip(filename: str, infodump_dir: str, user_agent: str | None) -> No
             ):
                 shutil.copyfileobj(src, dst)
     finally:
-        os.remove(tmp_path)
+        if tmp_path is not None:
+            os.remove(tmp_path)
 
 
 def format_json(output_path: str) -> None:
