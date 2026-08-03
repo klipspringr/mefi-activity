@@ -92,18 +92,22 @@ def get_cutoff_date(infodump_dir: str, df_comments_all: DataFrame) -> date:
 
     print(f"Oldest file: {oldest_file}, {oldest_file_ts} (converted to {INFODUMP_TZ})")
 
-    newest_comments = dict(
-        df_comments_all.filter(~col("site").is_in(["music"]))
-        .group_by("site")
-        .agg(col("datestamp").max())
-        .sort("site")
-        .iter_rows()
-    )
+    # August 2026: comment out comments-cutoff: we haven't had consistency problems for a while, and some subsites have so few comments now
 
-    for site, ts in newest_comments.items():
-        print(f'Newest comment on "{site}": {ts} (server time)')
+    # newest_comments = dict(
+    #     df_comments_all.filter(~col("site").is_in(["music"]))
+    #     .group_by("site")
+    #     .agg(col("datestamp").max())
+    #     .sort("site")
+    #     .iter_rows()
+    # )
 
-    cutoff_ts = min(oldest_file_ts, min(newest_comments.values()))
+    # for site, ts in newest_comments.items():
+    #     print(f'Newest comment on "{site}": {ts} (server time)')
+
+    # cutoff_ts = min(oldest_file_ts, min(newest_comments.values()))
+
+    cutoff_ts = min(oldest_file_ts)
 
     cutoff_date = date(cutoff_ts.year, cutoff_ts.month, 1)
 
