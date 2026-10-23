@@ -3,3 +3,5 @@ allowBuilds:
 onlyBuiltDependencies:
   - esbuild
   - svelte-preprocess
+update:
+  githubActions: true
