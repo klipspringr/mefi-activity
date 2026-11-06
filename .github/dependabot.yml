@@ -4,3 +4,34 @@ updates:
       directory: "/"
       schedule:
           interval: "weekly"
+      groups:
+          actions:
+              patterns: ["*"]
+
+    # "npm" also covers pnpm (pnpm-lock.yaml)
+    - package-ecosystem: "npm"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+      cooldown:
+          default-days: 7
+      groups:
+          npm-minor-patch:
+              update-types: ["minor", "patch"]
+      ignore:
+          # Major upgrades (e.g. SvelteKit 2 -> 3) would be done by me, if at all - not dependabot
+          - dependency-name: "*"
+            update-types: ["version-update:semver-major"]
+
+    - package-ecosystem: "pip"
+      directories: ["/infodump_tools", "/notebooks"]
+      schedule:
+          interval: "weekly"
+      cooldown:
+          default-days: 7
+      groups:
+          pip-minor-patch:
+              update-types: ["minor", "patch"]
+      ignore:
+          - dependency-name: "*"
+            update-types: ["version-update:semver-major"]
