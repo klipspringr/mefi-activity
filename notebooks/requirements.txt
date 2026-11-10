@@ -58,7 +58,7 @@ pandas==3.1.0
 pandocfilters==1.5.1
 parso==0.8.7
 pexpect==4.9.0
-platformdirs==4.14.0
+platformdirs==4.14.2
 polars==1.44.2
 polars-runtime-32==1.44.2
 prometheus_client==0.26.0
